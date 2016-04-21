@@ -2,8 +2,6 @@
 
 # TODO comment
 # TODO single hg blame -unf
-# TODO unify user and blame mode, either with clever palette or hand-assigned colors
-# TODO lines modified/added in current commit in file mode
 # TODO outline of file blobs in blame mode
 
 use strict;
@@ -51,11 +49,18 @@ my @file_color_idxs = shuffle (0..(-1+scalar @files));
 my $lcnt = 0;
 my $fcnt = 0;
 my %users;
-my %file_coords;
+my %files;
+my %filetypes;
 
 for my $file (@files) {
 	my @blame = split /\n/, `hg blame -fun "$file"`;
 	next if $blame[0] =~ /binary file/ or @blame == 0;
+
+	my ($ext) = ($file =~ /\.(\w+)$/);
+	$ext //= $file;
+	$filetypes{$ext}{hue} //= 280 * rand();
+	$files{$file}{hue} = 72 * rand() + $filetypes{$ext}{hue};
+
 	my (@x, @y);
 	for my $line (@blame) {
 		if (my ($user, $id, $filename) = ($line =~ / \s* (.*?) \s+ (\d+) \s+ (.*?): /x)) {
@@ -70,7 +75,7 @@ for my $file (@files) {
 			my $blame_rgb = hsv2rgb($users{$user}{hue}, $id/$current_version_id, 1);
 			my $file_rgb  = $id == $current_version_id ?
 								hsv2rgb(360, 1, 1) : # red
-								hsv2rgb(360 * $file_color_idxs[$fcnt]/(scalar @files), 0.5, 0.5);
+								hsv2rgb($files{$file}{hue}, 0.5, 0.8);
 			say join "\t", $user, $users{$user}{n}, $id, $fcnt, $file_rgb, $blame_rgb, @line_coords;
 			$lcnt++;
 		}
@@ -78,16 +83,18 @@ for my $file (@files) {
 	for my $c (0..$#curves) {
 		my $xmean = (sum @{$x[$c]}) / (scalar @{$x[$c]});
 		my $ymean = (sum @{$y[$c]}) / (scalar @{$y[$c]});
-		push @{$file_coords{$file}}, $xmean, $ymean;
+		push @{$files{$file}{coords}}, $xmean, $ymean;
 	}
 	$fcnt++;
 }
 
+warn Dumper \%filetypes;
+
 print "\n\n";
 
-for my $file (sort keys %file_coords) {
+for my $file (sort keys %files) {
 	my $basename = basename($file);
-	say join "\t", qq{"$basename"}, @{$file_coords{$file}};
+	say join "\t", qq{"$basename"}, @{$files{$file}{coords}};
 }
 
 ##############
