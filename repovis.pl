@@ -10,9 +10,10 @@ use strict;
 use warnings;
 use feature qw/say/;
 use Module::Load;
-use List::Util qw/sum/;
+use List::Util qw/sum shuffle/;
 use File::Basename;
 use Data::Dumper;
+use POSIX qw/floor/;
 
 $Data::Dumper::Indent = 0;
 
@@ -39,7 +40,13 @@ my @curves = map { $_->new() } @modules;
 
 my $dir = $ARGV[0] // '.';
 
+my ($current_version_hash, $current_version_id) = split /\s+/, `hg id -in $dir`;
+
 my @files = split /\n/, `hg stat -madcn $dir`;
+
+srand(1234);
+
+my @file_color_idxs = shuffle (0..(-1+scalar @files));
 
 my $lcnt = 0;
 my $fcnt = 0;
@@ -47,12 +54,12 @@ my %users;
 my %file_coords;
 
 for my $file (@files) {
-	my @blame = split /\n/, `hg blame -un "$file"`;
+	my @blame = split /\n/, `hg blame -fun "$file"`;
 	next if $blame[0] =~ /binary file/ or @blame == 0;
 	my (@x, @y);
 	for my $line (@blame) {
-		if (my ($user, $id) = ($line =~ / \s* (.*?) \s+ (\d+): /x)) {
-			$users{$user} //= scalar keys %users;
+		if (my ($user, $id, $filename) = ($line =~ / \s* (.*?) \s+ (\d+) \s+ (.*?): /x)) {
+			$users{$user} //= { n => scalar keys %users, hue => 360*rand() };
 			my @line_coords;
 			for my $c (0..$#curves) {
 				my ($x, $y) = $curves[$c]->n_to_xy($lcnt);
@@ -60,7 +67,11 @@ for my $file (@files) {
 				push @{$y[$c]}, $y;
 				push @line_coords, $x, $y;
 			}
-			say join "\t", $user, $users{$user}, $id, $fcnt, @line_coords;
+			my $blame_rgb = hsv2rgb($users{$user}{hue}, $id/$current_version_id, 1);
+			my $file_rgb  = $id == $current_version_id ?
+								hsv2rgb(360, 1, 1) : # red
+								hsv2rgb(360 * $file_color_idxs[$fcnt]/(scalar @files), 0.5, 0.5);
+			say join "\t", $user, $users{$user}{n}, $id, $fcnt, $file_rgb, $blame_rgb, @line_coords;
 			$lcnt++;
 		}
 	}
@@ -77,4 +88,43 @@ print "\n\n";
 for my $file (sort keys %file_coords) {
 	my $basename = basename($file);
 	say join "\t", qq{"$basename"}, @{$file_coords{$file}};
+}
+
+##############
+
+sub hsv2rgb {
+	my ( $h, $s, $v ) = @_;
+	my ($r, $g, $b);
+
+	if ( $s == 0 ) {
+		($r, $g, $b) = ($v, $v, $v);
+		return (int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9);
+	}
+
+	$h = ($h % 360) / 60;
+	my $i = floor( $h );
+	my $f = $h - $i;
+	my $p = $v * ( 1 - $s );
+	my $q = $v * ( 1 - $s * $f );
+	my $t = $v * ( 1 - $s * ( 1 - $f ) );
+
+	if ( $i == 0 ) {
+		($r, $g, $b) = ( $v, $t, $p);
+	}
+	elsif ( $i == 1 ) {
+		($r, $g, $b) = ( $q, $v, $p);
+	}
+	elsif ( $i == 2 ) {
+		($r, $g, $b) = ( $p, $v, $t);
+	}
+	elsif ( $i == 3 ) {
+		($r, $g, $b) = ( $p, $q, $v);
+	}
+	elsif ( $i == 4 ) {
+		($r, $g, $b) = ( $t, $p, $v);
+	}
+	else {
+		($r, $g, $b) = ( $v, $p, $q);
+	}
+	return (int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9);
 }
