@@ -7,7 +7,7 @@ unset border
 unset xtics
 unset ytics
 
-fn = 'calgobackend.txt' ##
+if (!exists("fn")) fn = 'calgobackend.txt' ##
 
 curves = "PeanoCurve \
 	WunderlichSerpentine \
@@ -46,4 +46,5 @@ file_cmds  = \
 	"fn u fcst+2*cid:fcst+1+2*cid:1 index 1 w labels center notit"
 bind F 'plotcmd = file_cmds; eval plotcmd'
 
+plotcmd = file_cmds
 eval file_cmds
