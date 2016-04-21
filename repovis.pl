@@ -1,8 +1,14 @@
 #!/usr/bin/perl
 
 # TODO comment
-# TODO single hg blame -unf
+# TODO track extent of graph and write matrix instead of one long line of data per source line
+#  (probably will have to lose easy support for different curves)
 # TODO outline of file blobs in blame mode
+# TODO separate file and blame mode:
+#  single hg blame -unf for blame, 
+#  get number of lines per file, divine changed lines from changeset for file mode
+#  ... but will have to hg up to target rev for that anyway
+# TODO js+html output? (yuck)
 
 use strict;
 use warnings;
@@ -12,6 +18,8 @@ use List::Util qw/sum shuffle/;
 use File::Basename;
 use Data::Dumper;
 use POSIX qw/floor/;
+use Cwd;
+use Getopt::Long;
 
 $Data::Dumper::Indent = 0;
 
@@ -34,13 +42,23 @@ BEGIN {
 	);
 }
 
+my $target_rev;
+GetOptions(
+	'rev=s' => \$target_rev,
+) or die "Usage: repovis.pl [-r] DIR"; 
+my $rev_opt = '';
+$rev_opt = "-r $target_rev" if defined $target_rev;
+
 my @curves = map { $_->new() } @modules;
 
 my $dir = $ARGV[0] // '.';
 
-my ($current_version_hash, $current_version_id) = split /\s+/, `hg id -in $dir`;
+my $cwd = getcwd();
+chdir $dir or die "Can't chdir to $dir";
+my ($current_version_hash, $current_version_id) = split /\s+/, `hg id -in`;
+chdir $cwd;
 
-my @files = split /\n/, `hg stat -madcn $dir`;
+my @files = split /\n/, `hg stat -madcn $rev_opt $dir`;
 
 srand(1234);
 
@@ -53,7 +71,7 @@ my %files;
 my %filetypes;
 
 for my $file (@files) {
-	my @blame = split /\n/, `hg blame -fun "$file"`;
+	my @blame = split /\n/, `hg blame -fun $rev_opt "$file"`;
 	next if $blame[0] =~ /binary file/ or @blame == 0;
 
 	my ($ext) = ($file =~ /\.(\w+)$/);
@@ -87,8 +105,6 @@ for my $file (@files) {
 	}
 	$fcnt++;
 }
-
-warn Dumper \%filetypes;
 
 print "\n\n";
 
