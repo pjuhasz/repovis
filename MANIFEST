@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/VCS-Visualize.t
+lib/VCS/Visualize.pm

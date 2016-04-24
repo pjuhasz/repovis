@@ -1,0 +1,6 @@
+Revision history for Perl extension VCS::Visualize.
+
+0.01  Sun Apr 24 20:33:01 2016
+	- original version; created by h2xs 1.23 with options
+		-AX --skip-exporter --use-new-tests -n VCS::Visualize
+
