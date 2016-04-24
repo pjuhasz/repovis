@@ -1,4 +1,4 @@
-package VCS::Visualize::Mercurial::CmdServer;
+package VCS::Visualize::Repo::Mercurial::CmdServer;
 
 use 5.010001;
 use strict;

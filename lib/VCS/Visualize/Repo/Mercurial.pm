@@ -1,4 +1,4 @@
-package VCS::Visualize::Mercurial;
+package VCS::Visualize::Repo::Mercurial;
 
 use 5.010001;
 use strict;
