@@ -18,6 +18,7 @@
 # - file mode colors should vary value, not just saturation
 # - sort files by date?
 # - cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
+# - git, svn? support
 # ? js+html output? (yuck)
 
 
