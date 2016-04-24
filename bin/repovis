@@ -1,15 +1,28 @@
 #!/usr/bin/perl
 
-# TODO comment
-# TODO track extent of graph and write matrix instead of one long line of data per source line
-#  (probably will have to lose easy support for different curves)
-# TODO outline of file blobs in blame mode
-# TODO separate file and blame mode:
-#  single hg blame -unf for blame, 
-#  get number of lines per file, divine changed lines from changeset for file mode
-#  ... but will have to hg up to target rev for that anyway
-# TODO js+html output? (yuck)
+# TODO:
+# - track extent of graph (done in extent.pl)
+# - outline of file blobs in blame mode (done in extent.pl)
+# - write binary matrices instead of one long line of data per source line
+# - support for different curves as a startup option
+# - revision, exclude, include as options
+# - modes:
+# -- analyze that produces blame and file mode data for all revisions, cache it in .repovis
+# --- keep some of the file, user etc. data between revisions for performance and consistency
+# -- interactive mode that just launches the gnuplot with the cached data (default when ran without parameters)
+# -- non-interactive parametric mode to generate image for just one rev
+# -- animate to create animations from images
+# - commit timeline with the same user/hue, commit/saturation colors as blame mode
+# -- branch graph?
+# - show deletions by red lines between pixels?
+# - file mode colors should vary value, not just saturation
+# - sort files by date?
+# - cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
+# ? js+html output? (yuck)
 
+
+
+__END__
 use strict;
 use warnings;
 use feature qw/say/;
