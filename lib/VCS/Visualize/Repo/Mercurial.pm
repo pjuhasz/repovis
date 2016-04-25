@@ -6,7 +6,9 @@ use warnings;
 
 sub find_root {
 	my ($dir) = @_;
-	return qx/hg --cwd "$dir" root/;
+	my $root_dir = qx|hg --cwd "$dir" root 2> /dev/null|;
+	chomp $root_dir;
+	return $root_dir;
 }
 
 sub new {
@@ -24,20 +26,31 @@ sub new {
 }
 
 sub current_rev {
-	my ($self, $dir) = @_;
-	return qx/hg log --cwd "$dir" --follow -l 1 --template '{node}'/;
+	my ($self) = @_;
+	my $rev = qx/hg log --cwd "$self->{dir}" --follow -l 1 --template '{node}'/;
+	chomp $rev;
+	return $rev;
+}
+
+sub numeric_id {
+	my ($self, $rev) = @_;
+	my $id = qx|hg id -n --cwd "$self->{dir}" --rev $rev|;
+	chomp $id;
+	return $id;
 }
 
 sub files {
 	my $self = shift;
-	my $exclude = map { qq{-X "$_"} } @{$self->{excluded}};
-	my $include = map { qq{-I "$_"} } @{$self->{included}};
-	return [ split /\n/, qx/hg stat -madcn $exclude $include "$self->{dir}"/ ];
+	my $exclude = join " ", map { qq{-X "$_"} } @{$self->{excluded}};
+	my $include = join " ", map { qq{-I "$_"} } @{$self->{included}};
+	my $command = qq{hg stat -madcn $exclude $include "$self->{dir}"};
+	return [ split /\n/, qx/$command/ ];
 }
 
 sub blame {
 	my ($self, $file) = @_;
-	return [ split /\n/, qx/hg blame -fun "$file"/ ];
+	my $command = qq{hg blame -R "$self->{root_dir}" -unc "$file"};
+	return [ split /\n/, qx/$command/ ];
 }
 
 sub update {
