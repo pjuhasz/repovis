@@ -7,6 +7,7 @@ use Carp;
 use Module::Load;
 
 sub new {
+	my $class = shift;
 	my %args = @_;
 	my @modules = qw/Mercurial/;
 	

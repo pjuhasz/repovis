@@ -12,6 +12,7 @@ sub identify {
 }
 
 sub new {
+	my $class = shift;
 	my %args = @_;
 	my $self = {
 		dir       => $args{dir},
@@ -19,7 +20,7 @@ sub new {
 		included  => $args{included},
 		orig_node => $args{orig_node},
 	};
-	bless $self;
+	bless $self, $class;
 }
 
 sub files {
