@@ -1,11 +1,15 @@
 #!/usr/bin/perl
 
 # TODO:
-# - track extent of graph (done in extent.pl)
-# - outline of file blobs in blame mode (done in extent.pl)
-# - write binary matrices instead of one long line of data per source line
-# - support for different curves as a startup option
-# - revision, exclude, include as options
+# - documentation
+# -- nice animgif for peasant blinding
+# + track extent of graph (done in extent.pl)
+# + outline of file blobs in blame mode (done in extent.pl)
+# -- directories?
+# + write binary matrices instead of one long line of data per source line
+# -- png directly?
+# + support for different curves as a startup option
+# + revision, exclude, include as options
 # - modes:
 # -- analyze that produces blame and file mode data for all revisions, cache it in .repovis
 # --- keep some of the file, user etc. data between revisions for performance and consistency
@@ -16,7 +20,7 @@
 # - commit timeline with the same user/hue, commit/saturation colors as blame mode
 # -- branch graph?
 # - show deletions by red lines between pixels?
-# - file mode colors should vary value, not just saturation
+# + file mode colors should vary value, not just saturation
 # - sort files by date?
 # - cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
 # - git, svn? support
@@ -28,7 +32,6 @@ use warnings;
 
 use Getopt::Long qw/:config no_ignore_case bundling/;
 use Pod::Usage;
-use Data::Dumper;
 
 use VCS::Visualize;
 
@@ -58,7 +61,5 @@ my $vis = VCS::Visualize->new(
 	include => $options{include},
 	exclude => $options{exclude},
 );
-
-print Dumper $vis;
 
 $vis->analyze_one_rev($options{revision});
