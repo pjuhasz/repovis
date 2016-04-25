@@ -21,19 +21,49 @@
 # - git, svn? support
 # ? js+html output? (yuck)
 
-
-
-__END__
+use 5.010001;
 use strict;
 use warnings;
-use feature qw/say/;
+
+use Getopt::Long qw/:config no_ignore_case bundling/;
+use Pod::Usage;
+use List::Util qw/any/;
+use Data::Dumper;
+
+use VCS::Visualize;
+
+my %options = (
+	'analyze'  => 0,
+	'Animate'  => 0,
+	'revision' => undef,
+	'include'  => undef,
+	'exclude'  => undef,
+	'curve'    => 'AR2W2Curve',
+);
+
+GetOptions(\%options,
+	'analyze|a!',
+	'Animate|A!',
+	'revision|r=s',
+	'include|I=s@',
+	'exclude|X=s@',
+	'curve|c=s',
+) or pod2usage(2);
+pod2usage(1) if $options{help};
+
+die "Error: '$options{curve}' is invalid for option --curve, it must be one of the following:\n" .
+	(join ", ", @VCS::Visualize::curve_modules) . "\n" if not any {$_ eq $options{curve}} @VCS::Visualize::curve_modules;
+
+my $dir = $ARGV[0] // '.';
+
+print Dumper \%options, $dir;
+
+__END__
 use Module::Load;
 use List::Util qw/sum shuffle/;
 use File::Basename;
 use Data::Dumper;
 use POSIX qw/floor/;
-use Cwd;
-use Getopt::Long;
 
 $Data::Dumper::Indent = 0;
 
