@@ -15,11 +15,11 @@ sub new {
 	
 	for my $module (@modules) {
 		my $class = 'VCS::Visualize::Repo::'.$module;
-		my $identify = $class.'::identify';
-		my ($node, $numeric) = $identify->($dir);
-		if (defined $node) {
+		my $find_root = $class.'::find_root';
+		my $root_dir = $find_root->($dir);
+		if (defined $root_dir) {
 			load $class;
-			return $class->new(%args, orig_node => $node, orig_id => $numeric);
+			return $class->new(%args, root_dir => $root_dir);
 		}
 	}
 	croak "abort: no repository found in $dir\n";

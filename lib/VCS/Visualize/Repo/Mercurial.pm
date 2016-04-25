@@ -4,28 +4,35 @@ use 5.010001;
 use strict;
 use warnings;
 
-sub identify {
+sub find_root {
 	my ($dir) = @_;
-	my $res = qx/hg --cwd "$dir" --follow -l 1 --template {node}\x1f{rev}/; # \x1f{tags}\x1f{branches}\x1f{bookmarks}
-	return unless $res;
-	return split /\x1f/, $res;
+	return qx/hg --cwd "$dir" root/;
 }
 
 sub new {
 	my $class = shift;
 	my %args = @_;
 	my $self = {
-		dir       => $args{dir},
+		root_dir  => $args{root_dir},
+		dir       => $args{dir} // $args{root_dir},
 		excluded  => $args{excluded}, 
 		included  => $args{included},
-		orig_node => $args{orig_node},
 	};
 	bless $self, $class;
+	$self->{orig_rev} = $self->current_rev;
+	return $self;
+}
+
+sub current_rev {
+	my ($self, $dir) = @_;
+	return qx/hg log --cwd "$dir" --follow -l 1 --template '{node}'/;
 }
 
 sub files {
 	my $self = shift;
-	return [ split /\n/, qx/hg stat -madcn "$self->{dir}"/ ];
+	my $exclude = map { qq{-X "$_"} } @{$self->{excluded}};
+	my $include = map { qq{-I "$_"} } @{$self->{included}};
+	return [ split /\n/, qx/hg stat -madcn $exclude $include "$self->{dir}"/ ];
 }
 
 sub blame {
