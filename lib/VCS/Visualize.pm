@@ -4,11 +4,36 @@ use 5.010001;
 use strict;
 use warnings;
 
+use Module::Load;
+use List::Util qw/sum shuffle/;
+use File::Basename;
+use POSIX qw/floor/;
+
 our $VERSION = '0.01';
 
+our @curve_modules = (
+		'PeanoCurve',             #3x3 self-similar quadrant
+		'WunderlichSerpentine',   #transpose parts of PeanoCurve
+		'HilbertCurve',           #2x2 self-similar quadrant
+		'HilbertSpiral',          #2x2 self-similar whole-plane
+		'ZOrderCurve',            #replicating Z shapes
+		'WunderlichMeander',      #3x3 "R" pattern quadrant
+		'BetaOmega',              #2x2 self-similar half-plane
+		'AR2W2Curve',             #2x2 self-similar of four parts
+		'KochelCurve',            #3x3 self-similar of two parts
+		'DekkingCurve',           #5x5 self-similar, edges
+		'DekkingCentres',         #5x5 self-similar, centres
+		'CincoCurve',             #5x5 self-similar
+);
 
-
-# Preloaded methods go here.
+sub new {
+	my $class = shift;
+	my %args = @_;
+	
+	my $self = {};
+	
+	bless $self, $class;
+}
 
 1;
 __END__
