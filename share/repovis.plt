@@ -1,3 +1,6 @@
+# plot fn('f') binary filetype=avs flipy w rgbimage notit, fn('l') u 2:3:1 w labels center notit, fn('c') u 1:2:3:4 w vec nohead lw 3 notit
+
+
 set termoption noenhanced
 
 set size ratio -1
