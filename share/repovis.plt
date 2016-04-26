@@ -1,5 +1,6 @@
-# plot fn('f') binary filetype=avs flipy w rgbimage notit, fn('l') u 2:3:1 w labels center notit, fn('c') u 1:2:3:4 w vec nohead lw 3 notit
+if (exists("rev")) rev = 1
 
+fn(rev, mode) = rev . '_' . mode . '.dat'
 
 set termoption noenhanced
 
@@ -10,44 +11,12 @@ unset border
 unset xtics
 unset ytics
 
-if (!exists("fn")) fn = 'calgobackend.txt' ##
+plotcmd = \
+	"plot fn(rev, mode) binary filetype=avs flipy endian=little w rgbimage notit," .\
+	"fn(rev, 'c') u 1:2:3:4 w vec nohead lc rgb 'gray' lw 2 notit," .\
+	"fn(rev, 'l') u 2:3:1 w labels center notit"
 
-curves = "PeanoCurve \
-	WunderlichSerpentine \
-	HilbertCurve \
-	HilbertSpiral \
-	ZOrderCurve \
-	WunderlichMeander \
-	BetaOmega \
-	AR2W2Curve \
-	KochelCurve \
-	DekkingCurve \
-	DekkingCentres \
-	CincoCurve"
+bind F 'mode = "f"; eval plotcmd'  
+bind B 'mode = "b"; eval plotcmd'  
 
-max_cid = words(curves)
-cst = 7
-fcst = 2
-cid = 0
-
-bind j 'cid = cid > 0       ? cid - 1 : cid; eval plotcmd'
-bind k 'cid = cid < max_cid ? cid + 1 : cid; eval plotcmd'
-
-#userid_cmds = \
-#	"set title 'User mode with '.word(curves, cid+1);" .\
-#	"plot fn u cst+2*cid:cst+1+2*cid:(0.5):(0.5):2 index 0 w boxxy lc var notit;"
-#bind U 'plotcmd = userid_cmds; eval plotcmd'
-
-blame_cmds  = \
-	"set title 'Blame mode with '.word(curves, cid+1);" .\
-	"plot fn u cst+2*cid:cst+1+2*cid:(0.5):(0.5):6 index 0  w boxxy lc rgb var notit;"
-bind B 'plotcmd = blame_cmds; eval plotcmd'
-
-file_cmds  = \
-	"set title 'File mode with '.word(curves, cid+1);" .\
-	"plot fn u cst+2*cid:cst+1+2*cid:(0.5):(0.5):5 index 0  w boxxy lc rgb var notit," .\
-	"fn u fcst+2*cid:fcst+1+2*cid:1 index 1 w labels center notit"
-bind F 'plotcmd = file_cmds; eval plotcmd'
-
-plotcmd = file_cmds
-eval file_cmds
+eval plotcmd

@@ -66,7 +66,7 @@ sub analyze_one_rev {
 
 	$self->{max_numeric_id} = $self->{repo}->numeric_id($rev);
 
-	my $files = $self->{repo}->files();
+	my $files = $self->{repo}->files($rev);
 
 	$self->{lcnt} = 0;
 	$self->{fcnt} = 0;
@@ -74,7 +74,7 @@ sub analyze_one_rev {
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
 
 	for my $file (@$files) {
-		$self->do_one_file($file);
+		$self->do_one_file($file, $rev);
 		my $ex = $self->{files}{$file}{extent};
 		if (defined $ex) {
 			$max_x = $max_x > $ex->{max_x} ? $max_x : $ex->{max_x};
@@ -98,9 +98,9 @@ sub analyze_one_rev {
 # private methods
 
 sub do_one_file {
-	my ($self, $file) = @_;
+	my ($self, $file, $rev) = @_;
 
-	my $blame = $self->{repo}->blame($file);
+	my $blame = $self->{repo}->blame($file, $rev);
 	return if @$blame == 0 or $blame->[0] =~ /binary file/;
 
 	my ($ext) = ($file =~ /\.(\w+)$/);

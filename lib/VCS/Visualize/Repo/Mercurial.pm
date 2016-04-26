@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use VCS::Visualize::Repo::Mercurial::CmdServer;
+use Carp;
 
 sub find_root {
 	my ($dir) = @_;
@@ -49,18 +50,35 @@ sub numeric_id {
 }
 
 sub files {
-	my $self = shift;
+	my ($self, $rev) = @_;
 	my @exclude = map { ('-X', $_) } @{$self->{exclude}};
 	my @include = map { ('-I', $_) } @{$self->{include}};
-	my @command = (qw/hg stat -madcn/, @exclude, @include, '--cwd', $self->{root_dir}, @{$self->{dirs}});
+	$rev //= $self->{orig_rev};
+	my @command = (
+		qw/hg stat -madcn/,
+		'--change', $rev,
+		@exclude, @include,
+		'--cwd', $self->{root_dir},
+		@{$self->{dirs}}
+	);
+
+	say join " ", @command;
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	return [ split /\n/, $out ];
 }
 
 sub blame {
-	my ($self, $file) = @_;
-	my @command = (qw/hg blame --cwd/, $self->{root_dir}, '-unc', $file);
+	my ($self, $file, $rev) = @_;
+	$rev //= $self->{orig_rev};
+	my @command = (
+		qw/hg blame -unc/,
+		'--cwd', $self->{root_dir}, 
+		'--rev', $rev,
+		$file
+	);
+
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
+	carp $err if $err;
 	return [ split /\n/, $out ];
 }
 
