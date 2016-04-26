@@ -9,6 +9,8 @@ use List::Util qw/sum shuffle first/;
 use File::Basename;
 use POSIX qw/floor/;
 use Carp;
+use File::Spec;
+use Cwd;
 
 use VCS::Visualize::Repo;
 
@@ -51,12 +53,28 @@ sub new {
 		users => {},
 		xs => -1,
 		ys => -1,
-		output_dir => '.repovis',
+		cache_dir => $args{cache_dir},
 	};
 
 	srand(1234);
 
 	bless $self, $class;
+	
+	$self->{cache_dir} //= File::Spec->catfile($self->{repo}->{root_dir}, '.repovis');
+	
+	if (not -e $self->{cache_dir}) {
+		mkdir($self->{cache_dir}) or croak "error: can't create cache dir $self->{cache_dir}";
+	}
+	elsif (-e $self->{cache_dir} and not -d $self->{cache_dir}) {
+		croak "error: can't create cache dir $self->{cache_dir} because a file with that name already exists"
+	}
+	
+	return $self;
+}
+
+sub get_all_revisions {
+	# TODO
+	return (undef);
 }
 
 sub analyze_one_rev {
@@ -208,10 +226,17 @@ sub trace_borders {
 sub to_disk {
 	my ($self, $rev) = @_;
 
-	$self->print_binary_matrix($rev.'_f.dat', 'file_grid');
-	$self->print_binary_matrix($rev.'_b.dat', 'blame_grid');
-	$self->print_files($rev.'_l.dat');
-	$self->print_borders($rev.'_c.dat');
+	my $old_wd = getcwd();
+	chdir($self->{cache_dir}) or croak "error: can't chdir to cache dir $self->{cache_dir}";
+	
+	my $id = sprintf("%05d", $self->{repo}->numeric_id($rev));
+
+	$self->print_binary_matrix($id.'_f.dat', 'file_grid');
+	$self->print_binary_matrix($id.'_b.dat', 'blame_grid');
+	$self->print_files($id.'_l.dat');
+	$self->print_borders($id.'_c.dat');
+	
+	chdir($old_wd) or croak "error: can't chdir back to $old_wd";
 }
 
 # gnuplot recognizes this format as AVS

@@ -36,21 +36,27 @@ use Pod::Usage;
 use VCS::Visualize;
 
 my %options = (
-	'analyze'  => 0,
-	'Animate'  => 0,
-	'revision' => undef,
-	'include'  => undef,
-	'exclude'  => undef,
-	'curve'    => 'AR2W2Curve',
+	'analyze-all' => 0,
+	'Animate'     => 0,
+	'revision'    => undef,
+	'include'     => undef,
+	'exclude'     => undef,
+	'curve'       => 'AR2W2Curve',
+	'cache-dir'   => undef,
+	'format'      => undef,
+	'output'      => undef,
 );
 
 GetOptions(\%options,
-	'analyze|a!',
+	'analyze-all|a!',
 	'Animate|A!',
-	'revision|r=s',
+	'revision|r=s@',
 	'include|I=s@',
 	'exclude|X=s@',
 	'curve|c=s',
+	'cache-dir=s',
+	'format|f=s',
+	'output|o=s',
 ) or pod2usage(2);
 pod2usage(1) if $options{help};
 
@@ -58,10 +64,31 @@ pod2usage(1) if $options{help};
 $ARGV[0] //= '.';
 my @dirs = @ARGV;
 
+# init main visualizer ojject
 my $vis = VCS::Visualize->new(
 	dirs    => [@dirs],
 	include => $options{include},
 	exclude => $options{exclude},
 );
 
-$vis->analyze_one_rev($options{revision});
+# if no revision was specified, assume the current revision
+my @revisions = @{$options{revision} // [ undef ] };
+
+# however, in analyze mode, analyze all revisions
+if ($options->{analyze) {
+	@revisions = $vis->get_all_revisions();
+}
+
+for my $rev (@revisions) {
+	$vis->analyze_one_rev($rev);
+}
+
+if ($options{Animate}) {
+# TODO create animgif or something
+}
+elsif (defined $options{format}) {
+# TODO  create file	
+}
+else {
+# TODO launch gnuplot interactively
+}
