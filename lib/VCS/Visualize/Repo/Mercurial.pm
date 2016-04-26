@@ -77,7 +77,7 @@ sub files {
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
-	return [ split /\n/, $out ];
+	return [ sort split /\n/, $out ];
 }
 
 sub blame {

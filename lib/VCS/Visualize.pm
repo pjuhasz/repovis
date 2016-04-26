@@ -86,6 +86,11 @@ sub analyze_one_rev {
 
 	$self->{max_numeric_id} = 0+$self->{repo}->numeric_id($rev);
 
+	# keep previously collected file data, but mark them invalid
+	for my $file (keys %{$self->{files}}) {
+		$self->{files}{$file}{status} = 0;
+	}
+
 	my $files = $self->{repo}->files($rev);
 
 	$self->{lcnt} = 0;
@@ -129,6 +134,7 @@ sub do_one_file {
 	$self->{files}{$file}{H} //= 36 * rand() + $self->{filetypes}{$ext}{H};
 	$self->{files}{$file}{S} //= 0.4+0.2*rand();
 	$self->{files}{$file}{V} //= 0.7+0.2*rand();
+	$self->{files}{$file}{status} = 1;
 
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
 
@@ -269,6 +275,7 @@ sub print_files {
 
 	open (my $fh, '>', $fn) or carp "can't open $fn";
 	for my $file (sort keys %{$self->{files}}) {
+		next if $self->{files}{$file}{status} == 0;
 		my $basename = basename($file);
 		say {$fh} join "\t", qq{"$basename"}, @{$self->{files}{$file}{center}} if defined $self->{files}{$file}{center};
 	}
