@@ -75,7 +75,7 @@ my $vis = VCS::Visualize->new(
 my @revisions = @{$options{revision} // [ undef ] };
 
 # however, in analyze mode, analyze all revisions
-if ($options->{analyze) {
+if ($options{analyze}) {
 	@revisions = $vis->get_all_revisions();
 }
 
