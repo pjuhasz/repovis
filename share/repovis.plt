@@ -1,4 +1,4 @@
-if (exists("rev")) rev = 1
+if (!exists("rev")) rev = "1"
 
 fn(rev, mode) = rev . '_' . mode . '.dat'
 
@@ -19,4 +19,5 @@ plotcmd = \
 bind F 'mode = "f"; eval plotcmd'  
 bind B 'mode = "b"; eval plotcmd'  
 
+mode = 'f'
 eval plotcmd
