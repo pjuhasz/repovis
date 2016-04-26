@@ -101,7 +101,7 @@ sub do_one_file {
 	my ($self, $file) = @_;
 
 	my $blame = $self->{repo}->blame($file);
-	return if $blame->[0] =~ /binary file/ or @$blame == 0;
+	return if @$blame == 0 or $blame->[0] =~ /binary file/;
 
 	my ($ext) = ($file =~ /\.(\w+)$/);
 	$ext //= $file;
@@ -221,7 +221,7 @@ sub print_binary_matrix {
 	open (my $fh, '>', $fn) or carp "can't open $fn";
 	binmode($fh);
 
-	print {$fh} pack 'L L', ($self->{xs}+1), ($self->{ys}+1);
+	print {$fh} pack 'L> L>', ($self->{xs}+1), ($self->{ys}+1);
 
 	for my $y (1..$self->{ys}+1) {
 		for my $x (1..$self->{xs}+1) {
@@ -233,11 +233,11 @@ sub print_binary_matrix {
 
 sub print_files {
 	my ($self, $fn) = @_;
-	
+
 	open (my $fh, '>', $fn) or carp "can't open $fn";
 	for my $file (sort keys %{$self->{files}}) {
 		my $basename = basename($file);
-		say {$fh} join "\t", qq{"$basename"}, @{$self->{files}{$file}{center}} if defined $self->{files}{$file};
+		say {$fh} join "\t", qq{"$basename"}, @{$self->{files}{$file}{center}} if defined $self->{files}{$file}{center};
 	}
 	close $fh;
 }
