@@ -74,8 +74,9 @@ sub new {
 }
 
 sub get_all_revisions {
-	# TODO
-	return (undef);
+	my ($self) = @_;
+	# TODO cache and save this
+	return $self->{repo}->get_log();
 }
 
 sub analyze_one_rev {
@@ -83,7 +84,7 @@ sub analyze_one_rev {
 
 	$rev //= $self->{repo}->current_rev();
 
-	$self->{max_numeric_id} = $self->{repo}->numeric_id($rev);
+	$self->{max_numeric_id} = 0+$self->{repo}->numeric_id($rev);
 
 	my $files = $self->{repo}->files($rev);
 
@@ -145,7 +146,11 @@ sub do_one_file {
 			$min_x = $min_x < $x ? $min_x : $x;
 			$min_y = $min_y < $y ? $min_y : $y;
 
-			my $blame_rgb = hsv2rgb($self->{users}{$user}{H}, $id/$self->{max_numeric_id}, 1);
+			my $blame_rgb = hsv2rgb(
+								$self->{users}{$user}{H},
+								0.03+0.93*$id/($self->{max_numeric_id}||1),
+								1
+							);
 			my $file_rgb  = $id == $self->{max_numeric_id} ?
 								$self->{commit_rgb} :
 								hsv2rgb( map { $self->{files}{$file}{$_} } qw/H S V/ );

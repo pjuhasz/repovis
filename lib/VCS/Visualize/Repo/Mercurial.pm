@@ -49,6 +49,20 @@ sub numeric_id {
 	return $id;
 }
 
+# TODO template with more info
+sub get_log {
+	my ($self) = @_;
+	my @command = (
+		qw/hg log/,
+		'--cwd', $self->{root_dir}, 
+		qw/--follow --template/, "{rev}\n"
+	);
+
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
+	return [] unless defined $out;
+	return [ split /\n/, $out ];
+}
+
 sub files {
 	my ($self, $rev) = @_;
 	my @exclude = map { ('-X', $_) } @{$self->{exclude}};
