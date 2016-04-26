@@ -17,8 +17,8 @@ sub new {
 	my $self = {
 		root_dir  => $args{root_dir},
 		dir       => $args{dir} // $args{root_dir},
-		excluded  => $args{excluded}, 
-		included  => $args{included},
+		exclude   => $args{exclude},
+		include   => $args{include},
 	};
 	bless $self, $class;
 	$self->{orig_rev} = $self->current_rev;
@@ -27,29 +27,29 @@ sub new {
 
 sub current_rev {
 	my ($self) = @_;
-	my $rev = qx/hg log --cwd "$self->{dir}" --follow -l 1 --template '{node}'/;
+	my $rev = qx/hg log --cwd "$self->{root_dir}" --follow -l 1 --template '{node}'/;
 	chomp $rev;
 	return $rev;
 }
 
 sub numeric_id {
 	my ($self, $rev) = @_;
-	my $id = qx|hg id -n --cwd "$self->{dir}" --rev $rev|;
+	my $id = qx|hg id -n --cwd "$self->{root_dir}" --rev $rev|;
 	chomp $id;
 	return $id;
 }
 
 sub files {
 	my $self = shift;
-	my $exclude = join " ", map { qq{-X "$_"} } @{$self->{excluded}};
-	my $include = join " ", map { qq{-I "$_"} } @{$self->{included}};
-	my $command = qq{hg stat -madcn $exclude $include "$self->{dir}"};
+	my $exclude = join " ", map { qq{-X "$_"} } @{$self->{exclude}};
+	my $include = join " ", map { qq{-I "$_"} } @{$self->{include}};
+	my $command = qq{hg stat -madcn $exclude $include --cwd "$self->{root_dir}" "$self->{dir}"};
 	return [ split /\n/, qx/$command/ ];
 }
 
 sub blame {
 	my ($self, $file) = @_;
-	my $command = qq{hg blame -R "$self->{root_dir}" -unc "$file"};
+	my $command = qq{hg blame --cwd "$self->{root_dir}" -unc "$file"};
 	return [ split /\n/, qx/$command/ ];
 }
 
