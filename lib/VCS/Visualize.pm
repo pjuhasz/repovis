@@ -189,6 +189,7 @@ sub grids_from_coords {
 	my ($self, $min_x, $min_y) = @_;
 
 	for my $file (keys %{$self->{files}}) {
+		next if $self->{files}{$file}{status} == 0;
 		for my $pt (@{$self->{files}{$file}{coords}}) {
 			$self->{file_grid}[ $pt->[0]-$min_x+1][$pt->[1]-$min_y+1] = $pt->[2];
 			$self->{blame_grid}[$pt->[0]-$min_x+1][$pt->[1]-$min_y+1] = $pt->[3];
