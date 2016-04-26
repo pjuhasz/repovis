@@ -54,10 +54,12 @@ GetOptions(\%options,
 ) or pod2usage(2);
 pod2usage(1) if $options{help};
 
-my $dir = $ARGV[0] // '.';
+# The remaining cmd line arguments are interpreted as target directories
+$ARGV[0] //= '.';
+my @dirs = @ARGV;
 
 my $vis = VCS::Visualize->new(
-	dir => $dir,
+	dirs    => [@dirs],
 	include => $options{include},
 	exclude => $options{exclude},
 );

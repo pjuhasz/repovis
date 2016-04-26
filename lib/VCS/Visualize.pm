@@ -42,7 +42,7 @@ sub new {
 	my $self = {
 		curve => $curve_class->new(),
 		repo  => VCS::Visualize::Repo->new(
-			dir     => $args{dir},
+			dirs    => $args{dirs},
 			include => $args{include},
 			exclude => $args{exclude},
 		),

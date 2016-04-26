@@ -16,12 +16,15 @@ sub new {
 	my %args = @_;
 	my $self = {
 		root_dir  => $args{root_dir},
-		dir       => $args{dir} // $args{root_dir},
+		dirs      => $args{dirs},
 		exclude   => $args{exclude},
 		include   => $args{include},
 	};
 	bless $self, $class;
 	$self->{orig_rev} = $self->current_rev;
+	unless (ref $args{dirs} eq 'ARRAY' and scalar @{$args{dirs}} and defined $args{dirs}[0]) {
+		$self->{dirs} = [$args{root_dir}];
+	}
 	return $self;
 }
 
@@ -43,7 +46,8 @@ sub files {
 	my $self = shift;
 	my $exclude = join " ", map { qq{-X "$_"} } @{$self->{exclude}};
 	my $include = join " ", map { qq{-I "$_"} } @{$self->{include}};
-	my $command = qq{hg stat -madcn $exclude $include --cwd "$self->{root_dir}" "$self->{dir}"};
+	my $dirs = join " ", map { qq{"$_"} } @{$self->{dirs}}; 
+	my $command = qq{hg stat -madcn $exclude $include --cwd "$self->{root_dir}" $dirs};
 	return [ split /\n/, qx/$command/ ];
 }
 

@@ -11,7 +11,10 @@ sub new {
 	my %args = @_;
 	my @modules = qw/Mercurial/;
 	
-	my $dir = $args{dir} // '.';
+	my $dir = '.';
+	if (ref $args{dirs} eq 'ARRAY' and scalar @{$args{dirs}} and defined $args{dirs}[0]) {
+		$dir = $args{dirs}[0];
+	}
 	
 	for my $module (@modules) {
 		my $class = 'VCS::Visualize::Repo::'.$module;
