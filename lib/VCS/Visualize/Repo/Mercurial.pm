@@ -4,6 +4,8 @@ use 5.010001;
 use strict;
 use warnings;
 
+use VCS::Visualize::Repo::Mercurial::CmdServer;
+
 sub find_root {
 	my ($dir) = @_;
 	my $root_dir = qx|hg --cwd "$dir" root 2> /dev/null|;
@@ -21,45 +23,45 @@ sub new {
 		include   => $args{include},
 	};
 	bless $self, $class;
+
+	$self->{cmdsrv} = VCS::Visualize::Repo::Mercurial::CmdServer->new(root_dir => $self->{root_dir});
+
 	$self->{orig_rev} = $self->current_rev;
 	unless (ref $args{dirs} eq 'ARRAY' and scalar @{$args{dirs}} and defined $args{dirs}[0]) {
-		$self->{dirs} = [$args{root_dir}];
+		$self->{dirs} = [$self->{root_dir}];
 	}
+
 	return $self;
 }
 
 sub current_rev {
 	my ($self) = @_;
-	my $rev = qx/hg log --cwd "$self->{root_dir}" --follow -l 1 --template '{node}'/;
-	chomp $rev;
+	my ($ret, $rev, $err) = $self->{cmdsrv}->runcommand(
+		qw/hg log --cwd/, $self->{root_dir}, qw/--follow -l 1 --template {node}/);
 	return $rev;
 }
 
 sub numeric_id {
 	my ($self, $rev) = @_;
-	my $id = qx|hg id -n --cwd "$self->{root_dir}" --rev $rev|;
-	chomp $id;
+	my ($ret, $id, $err) = $self->{cmdsrv}->runcommand(
+		qw/hg id -n --cwd/, $self->{root_dir}, '--rev', $rev);
 	return $id;
 }
 
 sub files {
 	my $self = shift;
-	my $exclude = join " ", map { qq{-X "$_"} } @{$self->{exclude}};
-	my $include = join " ", map { qq{-I "$_"} } @{$self->{include}};
-	my $dirs = join " ", map { qq{"$_"} } @{$self->{dirs}}; 
-	my $command = qq{hg stat -madcn $exclude $include --cwd "$self->{root_dir}" $dirs};
-	return [ split /\n/, qx/$command/ ];
+	my @exclude = map { ('-X', $_) } @{$self->{exclude}};
+	my @include = map { ('-I', $_) } @{$self->{include}};
+	my @command = (qw/hg stat -madcn/, @exclude, @include, '--cwd', $self->{root_dir}, @{$self->{dirs}});
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
+	return [ split /\n/, $out ];
 }
 
 sub blame {
 	my ($self, $file) = @_;
-	my $command = qq{hg blame --cwd "$self->{root_dir}" -unc "$file"};
-	return [ split /\n/, qx/$command/ ];
-}
-
-sub update {
-	my ($self, $rev) = @_;
-	qx/hg up --cwd "$self->{dir}" -r $rev/;
+	my @command = (qw/hg blame --cwd/, $self->{root_dir}, '-unc', $file);
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
+	return [ split /\n/, $out ];
 }
 
 sub DESTROY {

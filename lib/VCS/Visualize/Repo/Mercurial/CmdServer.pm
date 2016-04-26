@@ -77,56 +77,51 @@ sub get_chunk {
 }
  
 sub close {
- 
-    my $self = shift;
- 
-    # if the command server was created, see if it's
-    # still hanging around
-    if ( $self->{pid} ) {
-         $self->{writefh}->close;
-         _check_on_child( $self->{pid}, status => 'exit', wait => 1 );
-         delete $self->{pid};
-    }
- 
-    return;
- 
+	my $self = shift;
+
+	# if the command server was created, see if it's
+	# still hanging around
+	if ( $self->{pid} ) {
+		 $self->{writefh}->close;
+		 _check_on_child( $self->{pid}, status => 'exit', wait => 1 );
+		 delete $self->{pid};
+	}
+
+	return;
 }
  
 sub _check_on_child {
-    my $pid = shift;
-    my %opt = @_;
- 
-    my $flags = WUNTRACED | ( $opt{wait} ? 0 : WNOHANG );
-    my $status = waitpid( $pid, $flags );
- 
-    # if the child exitted, it had better have been a clean death;
-    # anything else is not ok.
-    if ( $pid == $status ) {
-         die( "unexpected exit of child with status ",
-            WEXITSTATUS( $? ), "\n" )
-          if WIFEXITED( $? ) && WEXITSTATUS( $? ) != 0;
- 
-        die( "unexpected exit of child with signal ",
-            WTERMSIG( $? ), "\n" )
-          if WIFSIGNALED( $? );
-    }
- 
-    if ( $opt{status} eq 'alive' ) {
- 
-        die( "unexpected exit of child\n" )
-            if $pid == $status || -1 == $status;
- 
-    }
- 
-    elsif ( $opt{status} eq 'exit' ) {
-         # is the child still alive
-        die( "child still alive\n" )
-             unless $pid == $status  || -1 == $status;
-    }
-    else {
-        die( "internal error: unknown child status requested\n" );
-    }
- 
+	my $pid = shift;
+	my %opt = @_;
+
+	my $flags = WUNTRACED | ( $opt{wait} ? 0 : WNOHANG );
+	my $status = waitpid( $pid, $flags );
+
+	# if the child exited, it had better have been a clean death;
+	# anything else is not ok.
+	if ( $pid == $status ) {
+		 die( "unexpected exit of child with status ",
+			WEXITSTATUS( $? ), "\n" )
+		  if WIFEXITED( $? ) && WEXITSTATUS( $? ) != 0;
+
+		die( "unexpected exit of child with signal ",
+			WTERMSIG( $? ), "\n" )
+		  if WIFSIGNALED( $? );
+	}
+
+	if ( $opt{status} eq 'alive' ) {
+		die( "unexpected exit of child\n" )
+			if $pid == $status || -1 == $status;
+	}
+
+	elsif ( $opt{status} eq 'exit' ) {
+		 # is the child still alive
+		die( "child still alive\n" )
+			 unless $pid == $status  || -1 == $status;
+	}
+	else {
+		die( "internal error: unknown child status requested\n" );
+	}
 }
 
 # call as $self->write( $buf, [ $len ] )
