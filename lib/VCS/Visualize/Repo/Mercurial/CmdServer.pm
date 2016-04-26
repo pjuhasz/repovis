@@ -15,7 +15,7 @@ sub new {
 	my $self = {};
 
 	my $root_dir = $args{root_dir} // '.';
-	my @command = (qw/hg serve --cmdserver pipe -R/, qq{"$root_dir"});
+	my @command = (qw/hg serve --cmdserver pipe -R/, $root_dir);
 
 	$self->{root_dir} = $root_dir;
 	
