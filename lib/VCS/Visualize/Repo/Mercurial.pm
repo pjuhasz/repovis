@@ -62,7 +62,6 @@ sub files {
 		@{$self->{dirs}}
 	);
 
-	say join " ", @command;
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	return [ split /\n/, $out ];
 }
@@ -78,7 +77,7 @@ sub blame {
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
-	carp $err if $err;
+	return [] unless defined $out;
 	return [ split /\n/, $out ];
 }
 

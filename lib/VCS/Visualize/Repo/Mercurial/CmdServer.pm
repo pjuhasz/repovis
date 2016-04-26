@@ -6,6 +6,7 @@ use warnings;
 use POSIX qw/ WNOHANG WEXITSTATUS WIFEXITED WTERMSIG WIFSIGNALED WUNTRACED /;
 use IPC::Open2 qw/open2/;
 use Carp;
+use FileHandle;
 
 sub new {
 	my $class = shift;
@@ -60,17 +61,19 @@ sub get_chunk {
 	$nr > 0
 		or croak( "unexpected end-of-file getting chunk header from server\n" );
 
-	my ( $ch, $len ) = unpack( 'A[1] l>', $_[0] );
+	my ( $ch, $expected_len ) = unpack( 'A[1] l>', $_[0] );
 
 	if ( $ch =~ /IL/ ) {
-		return $ch, $len;
+		return $ch, $expected_len;
 	}
-
 	else {
-		$self->read( $_[0], $len ) == $len
-			or croak(
-				"unexpected end-of-file reading $len bytes from server channel $ch\n"
-			);
+		my $read_len = 0;
+		while ($read_len < $expected_len) {
+			my $just_read = $self->read( $_[0], $expected_len - $read_len, $read_len);
+			croak "unexpected end-of-file reading from server channel $ch\n" if $just_read == 0;
+			croak "error while reading chunk from server channel $ch: $!\n" if $!;
+			$read_len += $just_read;
+		};
 		return $ch;
 	}
 
