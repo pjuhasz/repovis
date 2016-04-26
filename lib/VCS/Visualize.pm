@@ -54,6 +54,7 @@ sub new {
 		xs => -1,
 		ys => -1,
 		cache_dir => $args{cache_dir},
+		commit_rgb => 0xff0000, # red
 	};
 
 	srand(1234);
@@ -146,7 +147,7 @@ sub do_one_file {
 
 			my $blame_rgb = hsv2rgb($self->{users}{$user}{H}, $id/$self->{max_numeric_id}, 1);
 			my $file_rgb  = $id == $self->{max_numeric_id} ?
-								hsv2rgb(360, 1, 1) : # red
+								$self->{commit_rgb} :
 								hsv2rgb( map { $self->{files}{$file}{$_} } qw/H S V/ );
 
 			push @coord_list, [$x, $y, $file_rgb, $blame_rgb];
@@ -190,9 +191,11 @@ sub trace_borders {
 	my @border;
 	for my $y (0..($self->{ys}+1)) {
 		for my $x (0..($self->{xs}+1)) {
-			my $v = $self->{file_grid}[$x][$y]//0;
-			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v != ($self->{file_grid}[$x+1][$y]//0));
-			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v != ($self->{file_grid}[$x][$y+1]//0));
+			my $v = $self->{file_grid}[$x  ][$y  ] // 0;
+			my $r = $self->{file_grid}[$x+1][$y  ] // 0;
+			my $d = $self->{file_grid}[$x  ][$y+1] // 0;
+			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v != $r);
+			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v != $d);
 		}
 	}
 
