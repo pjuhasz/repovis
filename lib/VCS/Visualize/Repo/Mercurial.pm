@@ -68,7 +68,7 @@ sub files {
 	my @include = map { ('-I', $_) } @{$self->{include}};
 	my $rev = $args{rev} // $self->{orig_rev};
 	my @command = (
-		qw/hg stat -madcn/,
+		qw/hg stat -marc/,
 		'--change', $rev,
 		@exclude, @include,
 		'--cwd', $self->{root_dir},
