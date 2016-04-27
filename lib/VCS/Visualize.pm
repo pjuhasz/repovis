@@ -102,7 +102,8 @@ sub analyze_one_rev {
 
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
 
-	for my $file (@$files) {
+	for my $file_data (@$files) {
+		my $file = $file_data->{name};
 		$self->do_one_file($file, $rev);
 		my $ex = $self->{files}{$file}{extent};
 		if (defined $ex) {

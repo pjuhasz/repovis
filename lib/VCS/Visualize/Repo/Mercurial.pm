@@ -76,7 +76,14 @@ sub files {
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
-	return [ sort split /\n/, $out ];
+
+	my (@files);
+	for my $line (split /\n/, $out) {
+		my ($status, $name) = split / /, $line, 2;
+		push @files, { name => $name, status => $status}; # TODO get earliest rev, split path here?
+	}
+	@files = sort { $a->{name} cmp $b->{name} } @files;
+	return \@files;
 }
 
 sub blame {
