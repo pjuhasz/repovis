@@ -267,9 +267,9 @@ sub print_binary_matrix {
 
 	# cargo cult code to pre-allocate buffer
 	my $outbuffer = "";
-	#my $length = ($self->{xs} + 1) * ($self->{ys} + 1) + 8;
-	#vec($outbuffer, $length, 8)=0;
-	#$outbuffer = "";
+	my $length = ($self->{xs} + 1) * ($self->{ys} + 1) + 8;
+	vec($outbuffer, $length, 8)=0;
+	$outbuffer = "";
 	
 	open (my $fh, '>', $fn) or carp "can't open $fn";
 	binmode($fh);
