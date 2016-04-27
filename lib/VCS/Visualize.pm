@@ -125,6 +125,8 @@ sub analyze_one_rev {
 sub do_one_file {
 	my ($self, $file, $rev) = @_;
 
+	$self->{files}{$file}{status} = 0;
+
 	my $blame = $self->{repo}->blame($file, $rev);
 	return if @$blame == 0 or $blame->[0] =~ /binary file/;
 
