@@ -21,8 +21,8 @@ bind F 'mode = "f"; eval plotcmd'
 bind B 'mode = "b"; eval plotcmd'  
 
 # FIXME from real repo logs
-bind j '_rev = int(rev); _rev = _rev > 0    ? _rev-1 : 0; rev = sprintf("%05d", _rev); eval plotcmd'
-bind k '_rev = int(rev); _rev = _rev < 1000 ? _rev+1 : 0; rev = sprintf("%05d", _rev); eval plotcmd'
+bind j '_rev = int(rev); _rev = _rev > 0     ? _rev-1 : _rev; rev = sprintf("%05d", _rev); eval plotcmd'
+bind k '_rev = int(rev); _rev = _rev < 10000 ? _rev+1 : _rev; rev = sprintf("%05d", _rev); eval plotcmd'
 
 mode = 'f'
 eval plotcmd
