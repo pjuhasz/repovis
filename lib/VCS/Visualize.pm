@@ -86,7 +86,7 @@ sub analyze_all {
 	my $top = shift @$revs;
 	$self->analyze_one_rev($top);
 
-	$self->{relative_anal} = 1;
+	#$self->{relative_anal} = 1;
 	for my $rev (@$revs) {
 		$self->analyze_one_rev($rev);
 	}
@@ -470,7 +470,7 @@ sub print_files {
 	for my $file (sort keys %{$self->{files}}) {
 		next if $self->{files}{$file}{status} == 0;
 		my $basename = basename($file);
-		say {$fh} join "\t", qq{"$basename"}, @{$self->{files}{$file}{center}} if defined $self->{files}{$file}{center};
+		say {$fh} join "\t", qq{"$basename"}, @{$self->{files}{$file}{center}}, $self->{files}{$file}{start_cnt}, $self->{files}{$file}{end_cnt};
 	}
 	close $fh;
 }
