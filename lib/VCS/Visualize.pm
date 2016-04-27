@@ -190,6 +190,9 @@ sub do_one_file {
 sub grids_from_coords {
 	my ($self, $min_x, $min_y) = @_;
 
+	$self->{file_grid}  = [];
+	$self->{blame_grid} = [];
+
 	for my $file (keys %{$self->{files}}) {
 		next if $self->{files}{$file}{status} == 0;
 		for my $pt (@{$self->{files}{$file}{coords}}) {
