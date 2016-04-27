@@ -15,8 +15,7 @@ sub find_root {
 }
 
 sub new {
-	my $class = shift;
-	my %args = @_;
+	my ($class, %args) = @_;
 	my $self = {
 		root_dir  => $args{root_dir},
 		dirs      => $args{dirs},
@@ -43,9 +42,9 @@ sub current_rev {
 }
 
 sub numeric_id {
-	my ($self, $rev) = @_;
+	my ($self, %args) = @_;
 	my ($ret, $id, $err) = $self->{cmdsrv}->runcommand(
-		qw/hg id -n --cwd/, $self->{root_dir}, '--rev', $rev);
+		qw/hg id -n --cwd/, $self->{root_dir}, '--rev', $args{rev});
 	return $id;
 }
 
@@ -64,10 +63,10 @@ sub get_log {
 }
 
 sub files {
-	my ($self, $rev) = @_;
+	my ($self, %args) = @_;
 	my @exclude = map { ('-X', $_) } @{$self->{exclude}};
 	my @include = map { ('-I', $_) } @{$self->{include}};
-	$rev //= $self->{orig_rev};
+	my $rev = $args{rev} // $self->{orig_rev};
 	my @command = (
 		qw/hg stat -madcn/,
 		'--change', $rev,
@@ -81,13 +80,13 @@ sub files {
 }
 
 sub blame {
-	my ($self, $file, $rev) = @_;
-	$rev //= $self->{orig_rev};
+	my ($self, %args) = @_;
+	my $rev = $args{rev} // $self->{orig_rev};
 	my @command = (
 		qw/hg blame -unc/,
 		'--cwd', $self->{root_dir}, 
 		'--rev', $rev,
-		$file
+		$args{file}
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);

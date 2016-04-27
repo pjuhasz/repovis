@@ -88,14 +88,14 @@ sub analyze_one_rev {
 
 	$rev //= $self->{repo}->current_rev();
 
-	$self->{max_numeric_id} = 0+$self->{repo}->numeric_id($rev);
+	$self->{max_numeric_id} = 0+$self->{repo}->numeric_id(rev => $rev);
 
 	# keep previously collected file data, but mark them invalid
 	for my $file (keys %{$self->{files}}) {
 		$self->{files}{$file}{status} = 0;
 	}
 
-	my $files = $self->{repo}->files($rev);
+	my $files = $self->{repo}->files(rev => $rev);
 
 	$self->{lcnt} = 0;
 	$self->{fcnt} = 0;
@@ -131,7 +131,7 @@ sub do_one_file {
 
 	$self->{files}{$file}{status} = 0;
 
-	my $blame = $self->{repo}->blame($file, $rev);
+	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
 	return if @$blame == 0 or $blame->[0] =~ /binary file/;
 
 	my ($ext) = ($file =~ /\.(\w+)$/);
@@ -253,7 +253,7 @@ sub to_disk {
 	my $old_wd = getcwd();
 	chdir($self->{cache_dir}) or croak "error: can't chdir to cache dir $self->{cache_dir}";
 	
-	my $id = sprintf("%05d", $self->{repo}->numeric_id($rev));
+	my $id = sprintf("%05d", $self->{repo}->numeric_id(rev => $rev));
 
 	$self->print_binary_matrix($id.'_f.dat', FILE_GRID);
 	$self->print_binary_matrix($id.'_b.dat', BLAME_GRID);
