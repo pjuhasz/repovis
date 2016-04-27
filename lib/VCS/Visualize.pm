@@ -55,6 +55,7 @@ sub new {
 		ys => -1,
 		cache_dir => $args{cache_dir},
 		commit_rgb => 0xff0000, # red
+		cached_n_to_xy => [],
 	};
 
 	srand(1234);
@@ -148,7 +149,8 @@ sub do_one_file {
 				H => 360*rand(),
 			};
 
-			my ($x, $y) = $self->{curve}->n_to_xy($self->{lcnt});
+			$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
+			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
 			$max_x = $max_x > $x ? $max_x : $x;
 			$max_y = $max_y > $y ? $max_y : $y;
 			$min_x = $min_x < $x ? $min_x : $x;
