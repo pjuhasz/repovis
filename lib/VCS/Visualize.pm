@@ -137,9 +137,11 @@ sub do_one_file {
 	my ($ext) = ($file =~ /\.(\w+)$/);
 	$ext //= $file;
 	$self->{filetypes}{$ext}{H} //= 320 * rand();
-	$self->{files}{$file}{H} //= 36 * rand() + $self->{filetypes}{$ext}{H};
-	$self->{files}{$file}{S} //= 0.4+0.2*rand();
-	$self->{files}{$file}{V} //= 0.7+0.2*rand();
+	$self->{files}{$file}{rgb} //= hsv2rgb(
+			36 * rand() + $self->{filetypes}{$ext}{H},
+			0.4+0.2*rand(),
+			0.7+0.2*rand(),
+		);
 	$self->{files}{$file}{status} = 1;
 
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
@@ -284,7 +286,7 @@ sub print_binary_matrix {
 				if ($which_grid == FILE_GRID) {
 					$rgb = $id == $self->{max_numeric_id} ?
 							$self->{commit_rgb} :
-							hsv2rgb( map { $self->{files}{$file}{$_} } qw/H S V/ );
+							$self->{files}{$file}{rgb};
 				}
 				else {
 					$rgb = hsv2rgb(
