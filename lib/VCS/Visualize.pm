@@ -31,6 +31,9 @@ our @curve_modules = (
 		'CincoCurve',             #5x5 self-similar
 );
 
+use constant FILE_GRID  => 0;
+use constant BLAME_GRID => 1;
+
 sub new {
 	my $class = shift;
 	my %args = @_;
@@ -156,16 +159,13 @@ sub do_one_file {
 			$min_x = $min_x < $x ? $min_x : $x;
 			$min_y = $min_y < $y ? $min_y : $y;
 
-			my $blame_rgb = hsv2rgb(
-								$self->{users}{$user}{H},
-								0.03+0.93*$id/($self->{max_numeric_id}||1),
-								1
-							);
-			my $file_rgb  = $id == $self->{max_numeric_id} ?
-								$self->{commit_rgb} :
-								hsv2rgb( map { $self->{files}{$file}{$_} } qw/H S V/ );
-
-			push @coord_list, [$x, $y, $file_rgb, $blame_rgb];
+			push @coord_list, {
+								X => $x,
+								Y => $y,
+								i => $id,
+								u => $user,
+								f => $file,
+							};
 
 			$self->{lcnt}++;
 		}
@@ -173,8 +173,8 @@ sub do_one_file {
 	
 	my ($xmean, $ymean) = (0, 0);
 	for my $pt (@coord_list) {
-		$xmean += $pt->[0];
-		$ymean += $pt->[1];
+		$xmean += $pt->{X};
+		$ymean += $pt->{Y};
 	}
 	
 	$xmean /= scalar @coord_list;
@@ -192,14 +192,14 @@ sub do_one_file {
 sub grids_from_coords {
 	my ($self, $min_x, $min_y) = @_;
 
-	$self->{file_grid}  = [];
-	$self->{blame_grid} = [];
+	$self->{grid}  = [];
 
 	for my $file (keys %{$self->{files}}) {
 		next if $self->{files}{$file}{status} == 0;
 		for my $pt (@{$self->{files}{$file}{coords}}) {
-			$self->{file_grid}[ $pt->[0]-$min_x+1][$pt->[1]-$min_y+1] = $pt->[2];
-			$self->{blame_grid}[$pt->[0]-$min_x+1][$pt->[1]-$min_y+1] = $pt->[3];
+			my $x = delete $pt->{X};
+			my $y = delete $pt->{Y};
+			$self->{grid}[ $x - $min_x + 1 ][ $y - $min_y + 1 ] = $pt;
 		}
 	}
 }
@@ -210,11 +210,11 @@ sub trace_borders {
 	my @border;
 	for my $y (0..($self->{ys}+1)) {
 		for my $x (0..($self->{xs}+1)) {
-			my $v = $self->{file_grid}[$x  ][$y  ] // 0;
-			my $r = $self->{file_grid}[$x+1][$y  ] // 0;
-			my $d = $self->{file_grid}[$x  ][$y+1] // 0;
-			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v != $r);
-			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v != $d);
+			my $v = exists $self->{grid}[$x  ][$y  ] ? $self->{grid}[$x  ][$y  ]{f} : '';
+			my $r = exists $self->{grid}[$x+1][$y  ] ? $self->{grid}[$x+1][$y  ]{f} : '';
+			my $d = exists $self->{grid}[$x  ][$y+1] ? $self->{grid}[$x  ][$y+1]{f} : '';
+			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v ne $r);
+			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v ne $d);
 		}
 	}
 
@@ -253,8 +253,8 @@ sub to_disk {
 	
 	my $id = sprintf("%05d", $self->{repo}->numeric_id($rev));
 
-	$self->print_binary_matrix($id.'_f.dat', 'file_grid');
-	$self->print_binary_matrix($id.'_b.dat', 'blame_grid');
+	$self->print_binary_matrix($id.'_f.dat', FILE_GRID);
+	$self->print_binary_matrix($id.'_b.dat', BLAME_GRID);
 	$self->print_files($id.'_l.dat');
 	$self->print_borders($id.'_c.dat');
 	
@@ -263,7 +263,13 @@ sub to_disk {
 
 # gnuplot recognizes this format as AVS
 sub print_binary_matrix {
-	my ($self, $fn, $key) = @_;
+	my ($self, $fn, $which_grid) = @_;
+
+	# cargo cult code to pre-allocate buffer
+	my $outbuffer = "";
+	#my $length = ($self->{xs} + 1) * ($self->{ys} + 1) + 8;
+	#vec($outbuffer, $length, 8)=0;
+	#$outbuffer = "";
 	
 	open (my $fh, '>', $fn) or carp "can't open $fn";
 	binmode($fh);
@@ -272,9 +278,28 @@ sub print_binary_matrix {
 
 	for my $y (1..$self->{ys}+1) {
 		for my $x (1..$self->{xs}+1) {
-			print {$fh} pack 'L>', ($self->{$key}[$x][$y] // 0xffffff); 
+			my $rgb = 0x00ffffff;
+			if ( exists $self->{grid}[$x][$y] ) {
+				my ($id, $user, $file) = map { $self->{grid}[$x][$y]{$_} } qw/i u f/;
+				if ($which_grid == FILE_GRID) {
+					$rgb = $id == $self->{max_numeric_id} ?
+							$self->{commit_rgb} :
+							hsv2rgb( map { $self->{files}{$file}{$_} } qw/H S V/ );
+				}
+				else {
+					$rgb = hsv2rgb(
+						$self->{users}{$user}{H},
+						0.03+0.93*$id/($self->{max_numeric_id}||1),
+						1
+					);
+				}
+				$rgb |= 0xff000000;
+			}
+			$outbuffer .= pack 'L>', $rgb;
 		}
 	}
+
+	print {$fh} $outbuffer;
 	close $fh;
 }
 
