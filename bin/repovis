@@ -11,9 +11,10 @@
 # + support for different curves as a startup option
 # + revision, exclude, include as options
 # - modes:
-# -- analyze that produces blame and file mode data for all revisions, cache it in .repovis
-# --- keep some of the file, user etc. data between revisions for performance and consistency
-# --- use hg stat --change REV to get changed/added/deleted files, and hg blame --rev REV only those files, keep track of the rest
+# ++ analyze that produces blame and file mode data for all revisions, cache it in .repovis
+# +++ keep some of the file, user etc. data between revisions for performance and consistency
+# +++ use hg stat --change REV to get changed/added/deleted files, and hg blame --rev REV only those files, keep track of the rest
+# --- but this mode is broken because of branches
 # -- interactive mode that just launches the gnuplot with the cached data (default when ran without parameters)
 # -- non-interactive parametric mode to generate image for just one rev
 # -- animate to create animations from images
