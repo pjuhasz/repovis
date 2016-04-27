@@ -45,7 +45,7 @@ my %options = (
 	'cache-dir'   => undef,
 	'format'      => undef,
 	'output'      => undef,
-	'verbose'     => 0,
+	'quiet'       => 0,
 );
 
 GetOptions(\%options,
@@ -58,7 +58,7 @@ GetOptions(\%options,
 	'cache-dir=s',
 	'format|f=s',
 	'output|o=s',
-	'verbose|v!',
+	'quiet|q!',
 ) or pod2usage(2);
 pod2usage(1) if $options{help};
 
@@ -73,6 +73,7 @@ my $vis = VCS::Visualize->new(
 	dirs    => [@dirs],
 	include => $options{include},
 	exclude => $options{exclude},
+	quiet   => $options{quiet},
 );
 
 # if no revision was specified, assume the current revision
@@ -80,12 +81,12 @@ my $revisions = $options{revision} // [ undef ];
 
 # however, in analyze mode, analyze all revisions
 if ($options{'analyze-all'}) {
-	$revisions = $vis->get_all_revisions();
+	$vis->analyze_all();
 }
-
-for my $rev (@$revisions) {
-	print "analyzing revision $rev...\r" if $options{verbose};
-	$vis->analyze_one_rev($rev);
+else {
+	for my $rev (@$revisions) {
+		$vis->analyze_one_rev($rev);
+	}
 }
 
 if ($options{Animate}) {
