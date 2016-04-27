@@ -49,7 +49,7 @@ sub numeric_id {
 }
 
 # TODO template with more info
-sub get_log {
+sub get_all_revs {
 	my ($self) = @_;
 	my @command = (
 		qw/hg log/,
@@ -59,7 +59,21 @@ sub get_log {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	return [] unless defined $out;
-	return [ split /\n/, $out ];
+	return [ sort { $a <=> $b } split /\n/, $out ];
+}
+
+sub get_author {
+	my ($self, %args) = @_;
+	my $rev = $args{rev} // $self->{orig_rev};
+	my @command = (
+		qw/hg log/,
+		'--cwd', $self->{root_dir}, 
+		'--template', '{author}',
+		$args{file}
+	);
+
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
+	return $out;
 }
 
 sub files {
@@ -84,6 +98,23 @@ sub files {
 	}
 	@files = sort { $a->{name} cmp $b->{name} } @files;
 	return \@files;
+}
+
+sub line_count {
+	my ($self, %args) = @_;
+	my $rev = $args{rev} // $self->{orig_rev};
+	my @command = (
+		qw/hg cat/,
+		'--rev', $rev,
+		'--cwd', $self->{root_dir},
+		$args{file}
+	);
+
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
+
+	return 0 if -1 != index $out, "\0"; # heuristic used by HG to check for binary files
+	my @lines = split /\n/, $out; # TODO line based output
+	return scalar @lines;
 }
 
 sub blame {

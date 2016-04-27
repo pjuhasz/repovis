@@ -23,6 +23,9 @@
 # + file mode colors should vary value, not just saturation
 # - sort files by date?
 # + cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
+# -- instead of getting all output lines, concatenating then splitting, provide callbacks to process by lines?
+# -- or just simply return an aref of lines
+# - refactor all those max_x etc. calculations into an extent class or something
 # - git, svn? support
 # ? js+html output? (yuck)
 

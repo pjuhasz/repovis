@@ -82,7 +82,7 @@ sub new {
 sub analyze_all {
 	my ($self) = @_;
 
-	my $revs = $self->{repo}->get_log();
+	my $revs = $self->{repo}->get_all_revs();
 	my $top = shift @$revs;
 	$self->analyze_one_rev($top);
 
@@ -163,7 +163,7 @@ sub do_one_file {
 	$self->{files}{$file}{status} = 0;
 
 	my ($success, $coord_list, $extent);
-	if (0 and $self->{relative_anal}) { # TODO
+	if ($self->{relative_anal}) { # TODO
 		# in relative analysis mode we need to do different things with
 		# added, modified, removed or unchanged files.
 		# - for a modified file we want to process the full blame output
@@ -179,10 +179,9 @@ sub do_one_file {
 		}
 		elsif ($s eq 'A') {
 			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
-
 		}
 		elsif ($s eq 'C') {
-			($success, $coord_list, $extent) = $self->process_changed_file($file, $rev);
+			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev);
 		}
 		elsif ($s eq 'R') {
 			return;
@@ -270,11 +269,84 @@ sub process_modified_file {
 sub process_unchanged_file {
 	my ($self, $file, $rev) = @_;
 
+	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
+
+	my $start = $self->{lcnt};
+	$self->{lcnt} += $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+	my $end = $self->{lcnt};
+
+	my $coord_list = $self->{files}{$file}{coords};
+	for my $lcnt ($start..$end-1) {
+			$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
+			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
+			$max_x = $max_x > $x ? $max_x : $x;
+			$max_y = $max_y > $y ? $max_y : $y;
+			$min_x = $min_x < $x ? $min_x : $x;
+			$min_y = $min_y < $y ? $min_y : $y;
+
+			my $i = $lcnt - $start;
+			$coord_list->[$i]{X} = $x;
+			$coord_list->[$i]{Y} = $y;
+			# keep the rest
+	}
+
+	$self->{files}{$file}{start_lcnt} = $start;
+	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
+
+	my $extent = {
+		   max_x => $max_x,
+		   max_y => $max_y,
+		   min_x => $min_x,
+		   min_y => $min_y,
+	};
+	return (1, $coord_list, $extent);
 }
 
 sub process_added_file {
 	my ($self, $file, $rev) = @_;
 
+	my $line_count = $self->{repo}->line_count(rev => $rev, file => $file);
+	return (0, undef, undef) if $line_count == 0;
+
+	my $user = $self->{repo}->get_author(rev => $rev, file => $file);
+	$self->{users}{$user} //= {
+		H => 360*rand(),
+	};
+
+	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
+
+	my $start = $self->{lcnt};
+	$self->{lcnt} += $line_count;
+	my $end = $self->{lcnt};
+
+	my @coord_list;
+	for my $lcnt ($start..$end-1) {
+			$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
+			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
+			$max_x = $max_x > $x ? $max_x : $x;
+			$max_y = $max_y > $y ? $max_y : $y;
+			$min_x = $min_x < $x ? $min_x : $x;
+			$min_y = $min_y < $y ? $min_y : $y;
+
+			push @coord_list, {
+								X => $x,
+								Y => $y,
+								i => $self->{max_numeric_id},
+								u => $user,
+								f => $file,
+							};
+	}
+
+	$self->{files}{$file}{start_lcnt} = $start;
+	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
+
+	my $extent = {
+		   max_x => $max_x,
+		   max_y => $max_y,
+		   min_x => $min_x,
+		   min_y => $min_y,
+	};
+	return (1, \@coord_list, $extent);
 }
 
 sub grids_from_coords {
