@@ -16,7 +16,7 @@ use VCS::Visualize::Repo;
 
 our $VERSION = '0.01';
 
-our @curve_modules = (
+my @curve_modules = (
 		'PeanoCurve',             #3x3 self-similar quadrant
 		'WunderlichSerpentine',   #transpose parts of PeanoCurve
 		'HilbertCurve',           #2x2 self-similar quadrant
@@ -59,6 +59,8 @@ sub new {
 		cache_dir => $args{cache_dir},
 		commit_rgb => 0xff0000, # red
 		cached_n_to_xy => [],
+		relative_anal => 0,
+		quiet => $args{quiet},
 	};
 
 	srand(1234);
@@ -77,10 +79,17 @@ sub new {
 	return $self;
 }
 
-sub get_all_revisions {
+sub analyze_all {
 	my ($self) = @_;
-	# TODO cache and save this
-	return $self->{repo}->get_log();
+
+	my $revs = $self->{repo}->get_log();
+	my $top = shift @$revs;
+	$self->analyze_one_rev($top);
+
+	$self->{relative_anal} = 1;
+	for my $rev (@$revs) {
+		$self->analyze_one_rev($rev);
+	}
 }
 
 sub analyze_one_rev {
@@ -102,10 +111,10 @@ sub analyze_one_rev {
 
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
 
-	for my $file_data (@$files) {
-		my $file = $file_data->{name};
+	for my $file (@$files) {
+		my $name = $file->{name};
 		$self->do_one_file($file, $rev);
-		my $ex = $self->{files}{$file}{extent};
+		my $ex = $self->{files}{$name}{extent};
 		if (defined $ex) {
 			$max_x = $max_x > $ex->{max_x} ? $max_x : $ex->{max_x};
 			$max_y = $max_y > $ex->{max_y} ? $max_y : $ex->{max_y};
@@ -127,31 +136,104 @@ sub analyze_one_rev {
 
 # private methods
 
+# extract and and process revision and committer information of one file
+# in the specified revision, calculate coordinates of pixels on the 
+# space-filling curve that correspond to this file's lines
+# and update internal data structures
 sub do_one_file {
-	my ($self, $file, $rev) = @_;
+	my ($self, $file_data, $rev) = @_;
 
+	# get file name, check if we have a record for it already
+	my $file = $file_data->{name};
+	if (not exists $self->{files}{$file}) {
+		# assign similar colors (hues) to known filetypes
+		my ($ext) = ($file =~ /\.(\w+)$/);
+		$ext //= $file;
+		$self->{filetypes}{$ext}{H} //= 320 * rand();
+
+		# assign a color to this file and use it on all plots in the future
+		$self->{files}{$file}{rgb} = hsv2rgb(
+				36 * rand() + $self->{filetypes}{$ext}{H},
+				0.4+0.2*rand(),
+				0.7+0.2*rand(),
+			);
+	}
+
+	# cautiously mark it as invalid/not present for now
 	$self->{files}{$file}{status} = 0;
 
-	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
-	return if @$blame == 0 or $blame->[0] =~ /binary file/;
+	my ($success, $coord_list, $extent);
+	if (0 and $self->{relative_anal}) { # TODO
+		# in relative analysis mode we need to do different things with
+		# added, modified, removed or unchanged files.
+		# - for a modified file we want to process the full blame output
+		# - for an added file, we know that all lines were added in this rev,
+		#   so we don't run the blame command, just generate the list of 
+		#   x/y/id/file/user structs from the line count range.
+		# - for an unchanged file we update the coordinates 
+		#   but keep the rest of the data
+		# - removed files we mark as invalid, drop from processing
+		my $s = $file_data->{status};
+		if ($s eq 'M') {
+			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
+		}
+		elsif ($s eq 'A') {
+			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
 
-	my ($ext) = ($file =~ /\.(\w+)$/);
-	$ext //= $file;
-	$self->{filetypes}{$ext}{H} //= 320 * rand();
-	$self->{files}{$file}{rgb} //= hsv2rgb(
-			36 * rand() + $self->{filetypes}{$ext}{H},
-			0.4+0.2*rand(),
-			0.7+0.2*rand(),
-		);
+		}
+		elsif ($s eq 'C') {
+			($success, $coord_list, $extent) = $self->process_changed_file($file, $rev);
+		}
+		elsif ($s eq 'R') {
+			return;
+		}
+		else {
+			croak "error: unknown status '$s' while processing file $file in rev $rev";
+		}
+	}
+	else {
+		# in full analysis mode, when we can't rely on results of 
+		# previous scans, we don't care about removed files because 
+		# for our purposes they are simply not present in this revision,
+		# but we want to get full blame output on 
+		# added, modified or unchanged files.
+		return if $file_data->{status} eq 'R';
+
+		($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
+	}
+	return unless $success;
+	
+	# calculate center of the region occupied by this file, for the name label
+	my ($xmean, $ymean) = (0, 0);
+	for my $pt (@$coord_list) {
+		$xmean += $pt->{X};
+		$ymean += $pt->{Y};
+	}
+	
+	# save data
+	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+	$xmean /= $length;
+	$ymean /= $length;
+	$self->{files}{$file}{coords} = $coord_list;
+	$self->{files}{$file}{center} = [$xmean, $ymean];
+	$self->{files}{$file}{extent} = $extent;
 	$self->{files}{$file}{status} = 1;
+}
+
+sub process_modified_file {
+	my ($self, $file, $rev) = @_;
+
+	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
+	return (0, undef, undef) if @$blame == 0 or $blame->[0] =~ /binary file/;
 
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
+
+	$self->{files}{$file}{start_lcnt} = $self->{lcnt};
 
 	my @coord_list;
 	for my $line (@$blame) {
 		if (my ($user, $id, $crev) = ($line =~ / \s* (.*?) \s+ (\d+) \s+ ([\da-f]+): /x)) {
 			$self->{users}{$user} //= {
-				n => scalar(keys %{$self->{users}}),
 				H => 360*rand(),
 			};
 
@@ -173,23 +255,26 @@ sub do_one_file {
 			$self->{lcnt}++;
 		}
 	}
-	
-	my ($xmean, $ymean) = (0, 0);
-	for my $pt (@coord_list) {
-		$xmean += $pt->{X};
-		$ymean += $pt->{Y};
-	}
-	
-	$xmean /= scalar @coord_list;
-	$ymean /= scalar @coord_list;
-	$self->{files}{$file}{coords} = \@coord_list;
-	$self->{files}{$file}{center} = [$xmean, $ymean];
-	$self->{files}{$file}{extent} = {
-		max_x => $max_x,
-		max_y => $max_y,
-		min_x => $min_x,
-		min_y => $min_y,
+
+	$self->{files}{$file}{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
+
+	my $extent = {
+		   max_x => $max_x,
+		   max_y => $max_y,
+		   min_x => $min_x,
+		   min_y => $min_y,
 	};
+	return (1, \@coord_list, $extent);
+}
+
+sub process_unchanged_file {
+	my ($self, $file, $rev) = @_;
+
+}
+
+sub process_added_file {
+	my ($self, $file, $rev) = @_;
+
 }
 
 sub grids_from_coords {
@@ -200,8 +285,8 @@ sub grids_from_coords {
 	for my $file (keys %{$self->{files}}) {
 		next if $self->{files}{$file}{status} == 0;
 		for my $pt (@{$self->{files}{$file}{coords}}) {
-			my $x = delete $pt->{X};
-			my $y = delete $pt->{Y};
+			my $x = $pt->{X};
+			my $y = $pt->{Y};
 			$self->{grid}[ $x - $min_x + 1 ][ $y - $min_y + 1 ] = $pt;
 		}
 	}
