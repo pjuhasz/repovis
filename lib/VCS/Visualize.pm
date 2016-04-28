@@ -82,12 +82,12 @@ sub new {
 sub analyze_all {
 	my ($self) = @_;
 
-	my $revs = $self->{repo}->get_all_revs();
-	my $top = shift @$revs;
-	$self->analyze_one_rev($top->{rev});
+	$self->get_and_save_full_log();
+	my $first = $self->{revs}[0];
+	$self->analyze_one_rev($first->{rev});
 
 	$self->{relative_anal} = 1;
-	for my $rev (@$revs) {
+	for my $rev (@{$self->{revs}}) {
 		$self->analyze_one_rev($rev->{rev});
 	}
 }
@@ -513,6 +513,39 @@ sub print_borders {
 	open (my $fh, '>', $fn) or carp "can't open $fn";
 	say {$fh} join "\t", @$_ for @{$self->{borders}};
 	close $fh;
+}
+
+sub get_and_save_full_log {
+	my ($self) = @_;
+
+	my $revs = $self->{repo}->get_all_revs();
+
+	# TODO perhaps this should go in the repo-specific module?
+	# walking the graph to get merge nodes, nodes with more than one children etc.
+	my %by_node = map { $_->{node} => $_ } @$revs;
+	for my $this (@$revs) {
+		$this->{children} = [];
+		if (@{$this->{parents}} == 2) {
+			# merge commit
+			for my $i (0, 1) {
+				my $parent_node = $this->{parents}[$i];
+				my $parent = $by_node{$parent_node}{node};
+				push @{$parent->{children}}, $this->{node};
+			}
+		}
+		elsif (@{$this->{parents}} == 1) {
+			# commit whose parent is farther back in history
+			my $parent_node = $this->{parents}[0];
+			my $parent = $by_node{$parent_node}{node};
+			push @{$parent->{children}}, $this->{node};
+		}
+		else {
+			# normal commit, parent is the predecessor
+			
+		}
+	}
+
+	$self->{revs} = $revs;
 }
 
 sub hsv2rgb {
