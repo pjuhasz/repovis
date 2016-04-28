@@ -86,7 +86,7 @@ sub analyze_all {
 	my $top = shift @$revs;
 	$self->analyze_one_rev($top);
 
-	#$self->{relative_anal} = 1;
+	$self->{relative_anal} = 1;
 	for my $rev (@$revs) {
 		$self->analyze_one_rev($rev);
 	}
