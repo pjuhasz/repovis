@@ -13,6 +13,8 @@ use File::Spec;
 use Cwd;
 
 use VCS::Visualize::Repo;
+use VCS::Visualize::BoundingRectangle;
+
 
 our $VERSION = '0.01';
 
@@ -111,25 +113,22 @@ sub analyze_one_rev {
 	$self->{lcnt} = 0;
 	$self->{fcnt} = 0;
 
-	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
+	my $global_extent = VCS::Visualize::BoundingRectangle->new;
 
 	for my $file (@$files) {
 		my $name = $file->{name};
 		$self->do_one_file($file, $rev);
 		my $ex = $self->{files}{$name}{extent};
 		if (defined $ex) {
-			$max_x = $max_x > $ex->{max_x} ? $max_x : $ex->{max_x};
-			$max_y = $max_y > $ex->{max_y} ? $max_y : $ex->{max_y};
-			$min_x = $min_x < $ex->{min_x} ? $min_x : $ex->{min_x};
-			$min_y = $min_y < $ex->{min_y} ? $min_y : $ex->{min_y};
+			$global_extent->update($ex);
 			$self->{fcnt}++;
 		}
 	}
 	
-	$self->{xs} = $max_x-$min_x;
-	$self->{ys} = $max_y-$min_y;
+	$self->{xs} = $global_extent->xs();
+	$self->{ys} = $global_extent->ys();
 
-	$self->grids_from_coords($min_x, $min_y);
+	$self->grids_from_coords($global_extent->{min_x}, $global_extent->{min_y});
 
 	$self->trace_borders();
 	
@@ -242,7 +241,7 @@ sub process_modified_file {
 		$self->{files}{$file}{binary} = 0;
 	}
 
-	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
+	my $extent = VCS::Visualize::BoundingRectangle->new;
 
 	$self->{files}{$file}{start_lcnt} = $self->{lcnt};
 
@@ -255,10 +254,8 @@ sub process_modified_file {
 
 			$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
 			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
-			$max_x = $max_x > $x ? $max_x : $x;
-			$max_y = $max_y > $y ? $max_y : $y;
-			$min_x = $min_x < $x ? $min_x : $x;
-			$min_y = $min_y < $y ? $min_y : $y;
+
+			$extent->update_xy($x, $y);
 
 			push @coord_list, {
 								X => $x,
@@ -274,19 +271,13 @@ sub process_modified_file {
 
 	$self->{files}{$file}{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
 
-	my $extent = {
-		   max_x => $max_x,
-		   max_y => $max_y,
-		   min_x => $min_x,
-		   min_y => $min_y,
-	};
 	return (1, \@coord_list, $extent);
 }
 
 sub process_unchanged_file {
 	my ($self, $file, $rev) = @_;
 
-	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
+	my $extent = VCS::Visualize::BoundingRectangle->new;
 
 	return (0, undef, undef) if $self->{files}{$file}{binary};
 	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
@@ -300,10 +291,8 @@ sub process_unchanged_file {
 	for my $lcnt ($start..$end-1) {
 			$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
 			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
-			$max_x = $max_x > $x ? $max_x : $x;
-			$max_y = $max_y > $y ? $max_y : $y;
-			$min_x = $min_x < $x ? $min_x : $x;
-			$min_y = $min_y < $y ? $min_y : $y;
+
+			$extent->update_xy($x, $y);
 
 			my $i = $lcnt - $start;
 			$coord_list->[$i]{X} = $x;
@@ -314,12 +303,6 @@ sub process_unchanged_file {
 	$self->{files}{$file}{start_lcnt} = $start;
 	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
 
-	my $extent = {
-		   max_x => $max_x,
-		   max_y => $max_y,
-		   min_x => $min_x,
-		   min_y => $min_y,
-	};
 	return (1, $coord_list, $extent);
 }
 
@@ -345,7 +328,7 @@ sub process_added_file {
 		H => 360*rand(),
 	};
 
-	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
+	my $extent = VCS::Visualize::BoundingRectangle->new;
 
 	my $start = $self->{lcnt};
 	$self->{lcnt} += $line_count;
@@ -355,10 +338,8 @@ sub process_added_file {
 	for my $lcnt ($start..$end-1) {
 			$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
 			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
-			$max_x = $max_x > $x ? $max_x : $x;
-			$max_y = $max_y > $y ? $max_y : $y;
-			$min_x = $min_x < $x ? $min_x : $x;
-			$min_y = $min_y < $y ? $min_y : $y;
+
+			$extent->update_xy($x, $y);
 
 			push @coord_list, {
 								X => $x,
@@ -372,12 +353,6 @@ sub process_added_file {
 	$self->{files}{$file}{start_lcnt} = $start;
 	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
 
-	my $extent = {
-		   max_x => $max_x,
-		   max_y => $max_y,
-		   min_x => $min_x,
-		   min_y => $min_y,
-	};
 	return (1, \@coord_list, $extent);
 }
 
