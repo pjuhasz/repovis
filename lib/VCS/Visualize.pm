@@ -525,25 +525,13 @@ sub get_and_save_full_log {
 	my %by_node = map { $_->{node} => $_ } @$revs;
 	for my $this (@$revs) {
 		$this->{children} = [];
-		if (@{$this->{parents}} == 2) {
-			# merge commit
-			for my $i (0, 1) {
-				my $parent_node = $this->{parents}[$i];
-				my $parent = $by_node{$parent_node}{node};
-				push @{$parent->{children}}, $this->{node};
-			}
-		}
-		elsif (@{$this->{parents}} == 1) {
-			# commit whose parent is farther back in history
-			my $parent_node = $this->{parents}[0];
-			my $parent = $by_node{$parent_node}{node};
+		for my $parent_node (@{$this->{parents}}) {
+			my $parent = $by_node{$parent_node};
 			push @{$parent->{children}}, $this->{node};
 		}
-		else {
-			# normal commit, parent is the predecessor
-			
-		}
+		# TODO mark merge nodes somehow
 	}
+	# TODO nodes with >1 children
 
 	$self->{revs} = $revs;
 }
