@@ -363,7 +363,7 @@ sub grids_from_coords {
 		for my $pt (@{$self->{files}{$file}{coords}}) {
 			my $x = $pt->{X};
 			my $y = $pt->{Y};
-			$self->{grid}[ $x - $min_x + 1 ][ $y - $min_y + 1 ] = $pt;
+			$self->{grid}[ $y - $min_y + 1 ][ $x - $min_x + 1 ] = $pt;
 		}
 	}
 }
@@ -374,9 +374,9 @@ sub trace_borders {
 	my @border;
 	for my $y (0..($self->{ys}+1)) {
 		for my $x (0..($self->{xs}+1)) {
-			my $v = exists $self->{grid}[$x  ][$y  ] ? $self->{grid}[$x  ][$y  ]{f} : '';
-			my $r = exists $self->{grid}[$x+1][$y  ] ? $self->{grid}[$x+1][$y  ]{f} : '';
-			my $d = exists $self->{grid}[$x  ][$y+1] ? $self->{grid}[$x  ][$y+1]{f} : '';
+			my $v = exists $self->{grid}[$y  ][$x  ] ? $self->{grid}[$y  ][$x  ]{f} : '';
+			my $r = exists $self->{grid}[$y  ][$x+1] ? $self->{grid}[$y  ][$x+1]{f} : '';
+			my $d = exists $self->{grid}[$y+1][$x  ] ? $self->{grid}[$y+1][$x  ]{f} : '';
 			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v ne $r);
 			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v ne $d);
 		}
@@ -442,9 +442,10 @@ sub print_binary_matrices {
 	my $transparent_white = pack 'L>', 0x00ffffff;
 
 	for my $y (1..$self->{ys}+1) {
+		my $row = $self->{grid}[$y];
 		for my $x (1..$self->{xs}+1) {
-			if ( exists $self->{grid}[$x][$y] ) {
-				my $pt = $self->{grid}[$x][$y];
+			if ( exists $row->[$x] ) {
+				my $pt = $row->[$x];
 				$outbuffer_f .= pack 'L>',
 					($pt->{i} == $self->{max_numeric_id} ?
 					$self->{commit_rgb} :
