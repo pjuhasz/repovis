@@ -82,7 +82,7 @@ sub new {
 sub analyze_all {
 	my ($self) = @_;
 
-	my $revs = $self->{repo}->get_all_revs(); return;
+	my $revs = $self->{repo}->get_all_revs();
 	my $top = shift @$revs;
 	$self->analyze_one_rev($top->{rev});
 
