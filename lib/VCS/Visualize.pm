@@ -38,7 +38,7 @@ sub new {
 	my $class = shift;
 	my %args = @_;
 
-	my $curve_module = $args{curve_module} // 'AR2W2Curve';
+	my $curve_module = $args{curve_module} // 'KochelCurve';
 	carp "error: '$curve_module' is not a valid Math::PlanePath module, it must be one of the following:\n" .
 	(join ", ", @curve_modules) . "\n" if not first {$_ eq $curve_module} @curve_modules;
 	my $curve_class = 'Math::PlanePath::'.$curve_module;

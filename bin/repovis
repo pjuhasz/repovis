@@ -45,7 +45,7 @@ my %options = (
 	'revision'    => undef,
 	'include'     => undef,
 	'exclude'     => undef,
-	'curve'       => 'AR2W2Curve',
+	'curve'       => 'KochelCurve',
 	'cache-dir'   => undef,
 	'format'      => undef,
 	'output'      => undef,
@@ -74,10 +74,11 @@ my @dirs = @ARGV;
 
 # init main visualizer ojject
 my $vis = VCS::Visualize->new(
-	dirs    => [@dirs],
-	include => $options{include},
-	exclude => $options{exclude},
-	quiet   => $options{quiet},
+	dirs         => [@dirs],
+	include      => $options{include},
+	exclude      => $options{exclude},
+	curve_module => $options{curve},
+	quiet        => $options{quiet},
 );
 
 # if no revision was specified, assume the current revision
