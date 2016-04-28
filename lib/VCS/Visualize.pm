@@ -472,16 +472,16 @@ sub print_binary_matrix {
 		for my $x (1..$self->{xs}+1) {
 			my $rgb = 0x00ffffff;
 			if ( exists $self->{grid}[$x][$y] ) {
-				my ($id, $user, $file) = map { $self->{grid}[$x][$y]{$_} } qw/i u f/;
+				my $pt = $self->{grid}[$x][$y];
 				if ($which_grid == FILE_GRID) {
-					$rgb = $id == $self->{max_numeric_id} ?
+					$rgb = $pt->{i} == $self->{max_numeric_id} ?
 							$self->{commit_rgb} :
-							$self->{files}{$file}{rgb};
+							$self->{files}{ $pt->{f} }{rgb};
 				}
 				else {
 					$rgb = hsv2rgb(
-						$self->{users}{$user}{H},
-						0.03+0.93*$id/($self->{max_numeric_id}||1),
+						$self->{users}{ $pt->{u} }{H},
+						0.03+0.93*$pt->{i}/($self->{max_numeric_id}||1),
 						1
 					);
 				}
