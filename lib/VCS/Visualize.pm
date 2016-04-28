@@ -470,7 +470,7 @@ sub print_files {
 	for my $file (sort keys %{$self->{files}}) {
 		next if $self->{files}{$file}{status} == 0;
 		my $basename = basename($file);
-		say {$fh} join "\t", qq{"$basename"}, @{$self->{files}{$file}{center}}, $self->{files}{$file}{start_cnt}, $self->{files}{$file}{end_cnt};
+		say {$fh} join "\t", qq{"$basename"}, @{$self->{files}{$file}{center}}, $self->{files}{$file}{start_lcnt}, $self->{files}{$file}{end_lcnt};
 	}
 	close $fh;
 }
