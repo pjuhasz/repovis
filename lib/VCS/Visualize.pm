@@ -60,7 +60,7 @@ sub new {
 		commit_rgb => 0xff0000, # red
 		cached_n_to_xy => [],
 		relative_anal => 0,
-		quiet => $args{quiet},
+		verbose => $args{verbose},
 	};
 
 	srand(1234);
@@ -98,6 +98,8 @@ sub analyze_one_rev {
 	$rev //= $self->{repo}->current_rev();
 
 	$self->{max_numeric_id} = 0+$self->{repo}->numeric_id(rev => $rev);
+
+	print "processing revision $rev\n" if $self->{verbose} > 0;
 
 	# keep previously collected file data, but mark them invalid
 	for my $file (keys %{$self->{files}}) {
@@ -164,6 +166,8 @@ sub do_one_file {
 
 	my ($success, $coord_list, $extent);
 	if ($self->{relative_anal}) { # TODO
+		print " processing $file_data->{status}   file $file\n" if $self->{verbose} > 1;
+
 		# in relative analysis mode we need to do different things with
 		# added, modified, removed or unchanged files.
 		# - for a modified file we want to process the full blame output
@@ -197,6 +201,8 @@ sub do_one_file {
 		# but we want to get full blame output on 
 		# added, modified or unchanged files.
 		return if $file_data->{status} eq 'R';
+
+		print " processing new file $file\n" if $self->{verbose} > 1;
 
 		($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
 	}

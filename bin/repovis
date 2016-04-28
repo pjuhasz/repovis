@@ -49,7 +49,7 @@ my %options = (
 	'cache-dir'   => undef,
 	'format'      => undef,
 	'output'      => undef,
-	'quiet'       => 0,
+	'verbose'     => 0,
 );
 
 GetOptions(\%options,
@@ -62,7 +62,7 @@ GetOptions(\%options,
 	'cache-dir=s',
 	'format|f=s',
 	'output|o=s',
-	'quiet|q!',
+	'verbose|v+',
 ) or pod2usage(2);
 pod2usage(1) if $options{help};
 
@@ -78,7 +78,7 @@ my $vis = VCS::Visualize->new(
 	include      => $options{include},
 	exclude      => $options{exclude},
 	curve_module => $options{curve},
-	quiet        => $options{quiet},
+	verbose      => $options{verbose},
 );
 
 # if no revision was specified, assume the current revision
