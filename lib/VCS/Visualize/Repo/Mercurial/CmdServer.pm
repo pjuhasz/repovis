@@ -207,14 +207,21 @@ sub runcommand {
 
 	# read from server until a return channel is specified
 	my $buffer;
-	my ($error, $output);
+	my ($error, @output);
+	my $line = '';
 	while ( 1 ) {
 		my ( $ch, $len ) = $self->get_chunk( $buffer );
 		if ( $ch eq 'e' ) {
 			$error .= $buffer;
 		}
 		elsif( $ch eq 'o' ) {
-			$output .= $buffer;
+			if (chomp $buffer) {
+				push @output, $line.$buffer;
+				$line = '';
+			}
+			else {
+				$line .= $buffer;
+			}
 		}
 		elsif ( $ch eq 'r' ) {
 			state $length_exp = length( pack( 'l>', 0 ) );
@@ -223,7 +230,17 @@ sub runcommand {
 			  if length( $buffer ) != $length_exp;
 
 			my $ret = unpack( 'l>', $buffer );
-			return ($ret, $output, $error);
+
+			if (length $line) {
+				if (@output) {
+					$output[-1] .= $line;
+				}
+				else {
+					push @output, $line;
+				}
+			}
+
+			return ($ret, \@output, $error);
 		}
 		# TODO handle input, debug? provide callbacks for output for line-based processing?
 		elsif ( $ch =~ /[[:upper:]]/ ) {

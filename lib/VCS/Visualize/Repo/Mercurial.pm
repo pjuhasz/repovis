@@ -36,16 +36,16 @@ sub new {
 
 sub current_rev {
 	my ($self) = @_;
-	my ($ret, $rev, $err) = $self->{cmdsrv}->runcommand(
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(
 		qw/hg log --cwd/, $self->{root_dir}, qw/--follow -l 1 --template {node}/);
-	return $rev;
+	return join "", @$out;
 }
 
 sub numeric_id {
 	my ($self, %args) = @_;
-	my ($ret, $id, $err) = $self->{cmdsrv}->runcommand(
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(
 		qw/hg id -n --cwd/, $self->{root_dir}, '--rev', $args{rev});
-	return $id;
+	return join "", @$out;
 }
 
 # TODO template with more info
@@ -59,7 +59,7 @@ sub get_all_revs {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	return [] unless defined $out;
-	return [ sort { $a <=> $b } split /\n/, $out ];
+	return [ sort { $a <=> $b } @$out ];
 }
 
 sub get_author {
@@ -73,7 +73,7 @@ sub get_author {
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
-	return $out;
+	return join "", @$out;
 }
 
 sub files {
@@ -92,7 +92,7 @@ sub files {
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 
 	my (@files);
-	for my $line (split /\n/, $out) {
+	for my $line (@$out) {
 		my ($status, $name) = split / /, $line, 2;
 		push @files, { name => $name, status => $status}; # TODO get earliest rev, split path here?
 	}
@@ -112,9 +112,11 @@ sub line_count {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 
-	return -1 if -1 != index $out, "\0"; # heuristic used by HG to check for binary files
-	my @lines = split /\n/, $out; # TODO line based output
-	return scalar @lines;
+	return 0 if scalar @$out == 0;
+	for (@$out) {
+		return -1 if -1 != index $_, "\0"; # heuristic used by HG to check for binary files
+	}
+	return scalar @$out;
 }
 
 sub blame {
@@ -129,7 +131,7 @@ sub blame {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	return [] unless defined $out;
-	return [ split /\n/, $out ];
+	return $out;
 }
 
 sub DESTROY {
