@@ -59,7 +59,7 @@ sub new {
 		xs => -1,
 		ys => -1,
 		cache_dir => $args{cache_dir},
-		commit_rgb => 0xff0000, # red
+		commit_rgb => 0xffff0000, # fully opaque red
 		cached_n_to_xy => [],
 		relative_anal => 0,
 		verbose => $args{verbose},
@@ -443,26 +443,37 @@ sub print_binary_matrix {
 
 	print {$fh} pack 'L> L>', ($self->{xs}+1), ($self->{ys}+1);
 
-	for my $y (1..$self->{ys}+1) {
-		for my $x (1..$self->{xs}+1) {
-			my $rgb = 0x00ffffff;
-			if ( exists $self->{grid}[$x][$y] ) {
-				my $pt = $self->{grid}[$x][$y];
-				if ($which_grid == FILE_GRID) {
-					$rgb = $pt->{i} == $self->{max_numeric_id} ?
-							$self->{commit_rgb} :
-							$self->{files}{ $pt->{f} }{rgb};
+	if ($which_grid == FILE_GRID) {
+		for my $y (1..$self->{ys}+1) {
+			for my $x (1..$self->{xs}+1) {
+				if ( exists $self->{grid}[$x][$y] ) {
+					my $pt = $self->{grid}[$x][$y];
+					$outbuffer .= pack 'L>',
+						($pt->{i} == $self->{max_numeric_id} ?
+						$self->{commit_rgb} :
+						$self->{files}{ $pt->{f} }{rgb});
 				}
 				else {
-					$rgb = hsv2rgb(
+					$outbuffer .= pack 'L>', 0x00ffffff; # transparent white
+				}
+			}
+		}
+	}
+	else {
+		for my $y (1..$self->{ys}+1) {
+			for my $x (1..$self->{xs}+1) {
+				if ( exists $self->{grid}[$x][$y] ) {
+					my $pt = $self->{grid}[$x][$y];
+					$outbuffer .= pack 'L>', hsv2rgb(
 						$self->{users}{ $pt->{u} }{H},
 						0.03+0.93*$pt->{i}/($self->{max_numeric_id}||1),
 						1
 					);
 				}
-				$rgb |= 0xff000000;
+				else {
+					$outbuffer .= pack 'L>', 0x00ffffff;
+				}
 			}
-			$outbuffer .= pack 'L>', $rgb;
 		}
 	}
 
@@ -545,7 +556,7 @@ sub hsv2rgb {
 	else {
 		($r, $g, $b) = ( $v, $p, $q);
 	}
-	return (int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9);
+	return ((int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9)) | 0xff000000;
 }
 
 1;
