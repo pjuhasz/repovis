@@ -603,7 +603,7 @@ TODO
 
 =head1 SEE ALSO
 
-
+Mercurial 2.4 or newer required
 
 =head1 AUTHOR
 

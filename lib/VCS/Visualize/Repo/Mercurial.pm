@@ -52,8 +52,9 @@ sub get_all_revs {
 	my ($self) = @_;
 	# \x1f is the ASCII field separator character
 	# also, it would be nice to use the {children} template, but it's really slow
+	# p1rev, p2rev and date formatting is hg 2.4+
 	my $template =  join "\x1f", map { "{$_}" }
-		qw/ node|short rev author|user author/, 'date(date, "%s")', qw/ desc branch parents /;
+		qw/ node|short rev author|user author/, 'date(date, "%s")', qw/ desc branch p1rev|short p2rev|short /;
 	$template .= "\\n";
 	my @command = (
 		qw/hg log/,
@@ -67,12 +68,12 @@ sub get_all_revs {
 	for my $line (@$out) {
 		my (@fields) = split /\x1f/, $line;
 		my $rev = {};
-		for (qw/ node rev user user_longname date desc branch parents /) {
+		for (qw/ node rev user user_longname date desc branch p1rev p2rev /) {
 			$rev->{$_} = shift @fields;
 		}
 
-		# hg gives us the parent revisions as 432:badc0de, we strip the local rev number
-		$rev->{parents}  = [ map { substr($_, 1 + index($_, ':')) } split /\s+/, $rev->{parents} // '' ];
+		$rev->{parents}  = [ $rev->{p1rev}, $rev->{p2rev} ];
+		delete $rev->{p1rev}; delete $rev->{p2rev}; 
 
 		push @revs, $rev;
 	}
