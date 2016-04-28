@@ -112,7 +112,7 @@ sub line_count {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 
-	return 0 if -1 != index $out, "\0"; # heuristic used by HG to check for binary files
+	return -1 if -1 != index $out, "\0"; # heuristic used by HG to check for binary files
 	my @lines = split /\n/, $out; # TODO line based output
 	return scalar @lines;
 }

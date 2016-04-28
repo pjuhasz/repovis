@@ -223,7 +223,18 @@ sub process_modified_file {
 	my ($self, $file, $rev) = @_;
 
 	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
-	return (0, undef, undef) if @$blame == 0 or $blame->[0] =~ /binary file/;
+	if (@$blame == 0) {
+		return (0, undef, undef); # empty file, skip it
+	}
+	elsif ($blame->[0] =~ /binary file/) {
+		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
+		return (0, undef, undef);
+	}
+	else {
+		# not binary (anymore? the old binary file might have been
+		# replaced by a text file of the same name), clear the taint
+		$self->{files}{$file}{binary} = 0;
+	}
 
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
 
@@ -271,8 +282,12 @@ sub process_unchanged_file {
 
 	my ($max_x, $max_y, $min_x, $min_y) = (-1000000, -1000000, 1000000, 1000000);
 
+	return (0, undef, undef) if $self->{files}{$file}{binary};
+	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+	return (0, undef, undef) if $length == 0;
+
 	my $start = $self->{lcnt};
-	$self->{lcnt} += $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+	$self->{lcnt} += $length;
 	my $end = $self->{lcnt};
 
 	my $coord_list = $self->{files}{$file}{coords};
@@ -306,6 +321,17 @@ sub process_added_file {
 	my ($self, $file, $rev) = @_;
 
 	my $line_count = $self->{repo}->line_count(rev => $rev, file => $file);
+	if ($line_count == 0) {
+		return (0, undef, undef); # empty file, skip it
+	}
+	elsif ($line_count == -1) {
+		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
+		return (0, undef, undef);
+	}
+	else {
+		$self->{files}{$file}{binary} = 0;
+	}
+	
 	return (0, undef, undef) if $line_count == 0;
 
 	my $user = $self->{repo}->get_author(rev => $rev, file => $file);
