@@ -82,13 +82,13 @@ sub new {
 sub analyze_all {
 	my ($self) = @_;
 
-	my $revs = $self->{repo}->get_all_revs();
+	my $revs = $self->{repo}->get_all_revs(); return;
 	my $top = shift @$revs;
-	$self->analyze_one_rev($top);
+	$self->analyze_one_rev($top->{rev});
 
 	$self->{relative_anal} = 1;
 	for my $rev (@$revs) {
-		$self->analyze_one_rev($rev);
+		$self->analyze_one_rev($rev->{rev});
 	}
 }
 

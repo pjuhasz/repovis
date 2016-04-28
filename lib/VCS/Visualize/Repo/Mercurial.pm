@@ -48,18 +48,36 @@ sub numeric_id {
 	return join "", @$out;
 }
 
-# TODO template with more info
 sub get_all_revs {
 	my ($self) = @_;
+	# \x1f is the ASCII field separator character
+	# also, it would be nice to use the {children} template, but it's really slow
+	my $template =  join "\x1f", map { "{$_}" }
+		qw/ node|short rev author|user author/, 'date(date, "%s")', qw/ desc branch parents /;
+	$template .= "\\n";
 	my @command = (
 		qw/hg log/,
 		'--cwd', $self->{root_dir}, 
-		qw/--follow --template/, "{rev}\n"
+		qw/--follow --template/, $template,
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	return [] unless defined $out;
-	return [ sort { $a <=> $b } @$out ];
+	my @revs;
+	for my $line (@$out) {
+		my (@fields) = split /\x1f/, $line;
+		my $rev = {};
+		for (qw/ node rev user user_longname date desc branch parents /) {
+			$rev->{$_} = shift @fields;
+		}
+
+		# hg gives us the parent revisions as 432:badc0de, we strip the local rev number
+		$rev->{parents}  = [ map { substr($_, 1 + index($_, ':')) } split /\s+/, $rev->{parents} // '' ];
+
+		push @revs, $rev;
+	}
+	@revs = sort { $a->{date} cmp $b->{date} } @revs;
+	return \@revs;
 }
 
 sub get_author {
