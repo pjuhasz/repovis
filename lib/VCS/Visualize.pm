@@ -33,9 +33,6 @@ my @curve_modules = (
 		'CincoCurve',             #5x5 self-similar
 );
 
-use constant FILE_GRID  => 0;
-use constant BLAME_GRID => 1;
-
 sub new {
 	my $class = shift;
 	my %args = @_;
@@ -420,8 +417,7 @@ sub to_disk {
 	
 	my $id = sprintf("%05d", $self->{repo}->numeric_id(rev => $rev));
 
-	$self->print_binary_matrix($id.'_f.dat', FILE_GRID);
-	$self->print_binary_matrix($id.'_b.dat', BLAME_GRID);
+	$self->print_binary_matrices('file_grid' => $id.'_f.dat', 'blame_grid' => $id.'_b.dat');
 	$self->print_files($id.'_l.dat');
 	$self->print_borders($id.'_c.dat');
 	
@@ -429,56 +425,55 @@ sub to_disk {
 }
 
 # gnuplot recognizes this format as AVS
-sub print_binary_matrix {
-	my ($self, $fn, $which_grid) = @_;
+sub print_binary_matrices {
+	my ($self, %args) = @_;
 
-	# cargo cult code to pre-allocate buffer
-	my $outbuffer = "";
+	# cargo cult code to pre-allocate buffers
 	my $length = ($self->{xs} + 1) * ($self->{ys} + 1) + 8;
-	vec($outbuffer, $length, 8)=0;
-	$outbuffer = "";
 	
-	open (my $fh, '>', $fn) or carp "can't open $fn";
-	binmode($fh);
+	my $outbuffer_f = "";
+	vec($outbuffer_f, $length, 8)=0;
+	$outbuffer_f = "";
 
-	print {$fh} pack 'L> L>', ($self->{xs}+1), ($self->{ys}+1);
+	my $outbuffer_b = "";
+	vec($outbuffer_b, $length, 8)=0;
+	$outbuffer_b = "";
 
-	if ($which_grid == FILE_GRID) {
-		for my $y (1..$self->{ys}+1) {
-			for my $x (1..$self->{xs}+1) {
-				if ( exists $self->{grid}[$x][$y] ) {
-					my $pt = $self->{grid}[$x][$y];
-					$outbuffer .= pack 'L>',
-						($pt->{i} == $self->{max_numeric_id} ?
-						$self->{commit_rgb} :
-						$self->{files}{ $pt->{f} }{rgb});
-				}
-				else {
-					$outbuffer .= pack 'L>', 0x00ffffff; # transparent white
-				}
+	my $transparent_white = pack 'L>', 0x00ffffff;
+
+	for my $y (1..$self->{ys}+1) {
+		for my $x (1..$self->{xs}+1) {
+			if ( exists $self->{grid}[$x][$y] ) {
+				my $pt = $self->{grid}[$x][$y];
+				$outbuffer_f .= pack 'L>',
+					($pt->{i} == $self->{max_numeric_id} ?
+					$self->{commit_rgb} :
+					$self->{files}{ $pt->{f} }{rgb});
+
+				$outbuffer_b .= pack 'L>', hsv2rgb(
+					$self->{users}{ $pt->{u} }{H},
+					0.03+0.93*$pt->{i}/($self->{max_numeric_id}||1),
+					1
+				);
 			}
-		}
-	}
-	else {
-		for my $y (1..$self->{ys}+1) {
-			for my $x (1..$self->{xs}+1) {
-				if ( exists $self->{grid}[$x][$y] ) {
-					my $pt = $self->{grid}[$x][$y];
-					$outbuffer .= pack 'L>', hsv2rgb(
-						$self->{users}{ $pt->{u} }{H},
-						0.03+0.93*$pt->{i}/($self->{max_numeric_id}||1),
-						1
-					);
-				}
-				else {
-					$outbuffer .= pack 'L>', 0x00ffffff;
-				}
+			else {
+				$outbuffer_f .= $transparent_white;
+				$outbuffer_b .= $transparent_white;
 			}
 		}
 	}
 
-	print {$fh} $outbuffer;
-	close $fh;
+	open (my $fh_f, '>', $args{file_grid}) or croak "can't open $args{file_grid}";
+	binmode($fh_f);
+	print {$fh_f} pack 'L> L>', ($self->{xs}+1), ($self->{ys}+1);
+	print {$fh_f} $outbuffer_f;
+	close $fh_f;
+
+	open (my $fh_b, '>', $args{blame_grid}) or croak "can't open $args{blame_grid}";
+	binmode($fh_b);
+	print {$fh_b} pack 'L> L>', ($self->{xs}+1), ($self->{ys}+1);
+	print {$fh_b} $outbuffer_b;
+	close $fh_b;
 }
 
 sub print_files {
