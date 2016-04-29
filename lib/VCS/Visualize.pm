@@ -82,12 +82,16 @@ sub analyze_all {
 	my ($self) = @_;
 
 	$self->get_and_save_full_log();
+
+	$self->print_revs('revs.dat'); # TODO also read and check cached data to avoid redoing revs that are still valid
+	$self->print_users('users.dat');
+
 	my $first = $self->{revs}[0];
-	$self->analyze_one_rev($first->{rev});
+	$self->analyze_one_rev($first->{localrev});
 
 	$self->{relative_anal} = 1;
 	for my $rev (@{$self->{revs}}[1..$#{$self->{revs}}]) {
-		$self->analyze_one_rev($rev->{rev});
+		$self->analyze_one_rev($rev->{localrev});
 	}
 }
 
@@ -247,6 +251,7 @@ sub process_modified_file {
 		if (my ($user, $id, $crev) = ($line =~ / \s* (.*?) \s+ (\d+) \s+ ([\da-f]+): /x)) {
 			$self->{users}{$user} //= {
 				H => 360*rand(),
+				n => scalar keys %{$self->{users}},
 			};
 
 			$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
@@ -323,6 +328,7 @@ sub process_added_file {
 	my $user = $self->{repo}->get_author(rev => $rev, file => $file);
 	$self->{users}{$user} //= {
 		H => 360*rand(),
+		n => scalar keys %{$self->{users}},
 	};
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
@@ -506,6 +512,14 @@ sub get_and_save_full_log {
 	# walking the graph to get merge nodes, nodes with more than one children etc.
 	my %by_node = map { $_->{node} => $_ } @$revs;
 	for my $this (@$revs) {
+		# collect users who ever touched the repo
+		$self->{users}{$this->{user}} //= {
+			H => 360*rand(),
+			n => scalar keys %{$self->{users}},
+			user_longname => $this->{user_longname},
+		};
+		
+		# calculate which nodes this node is a child 
 		$this->{children} = [];
 		for my $parent_node (@{$this->{parents}}) {
 			my $parent = $by_node{$parent_node};
@@ -518,13 +532,69 @@ sub get_and_save_full_log {
 	$self->{revs} = $revs;
 }
 
+sub print_revs {
+	my ($self, $fn) = @_;
+
+	my %by_node = map { $_->{node} => $_ } @{$self->{revs}};
+
+	my $old_wd = getcwd();
+	chdir($self->{cache_dir}) or croak "error: can't chdir to cache dir $self->{cache_dir}";
+
+	open (my $fh, '>', $fn) or croak "can't open $fn";
+	say {$fh} '#' . join "\t", qw/user_idx user_name rgb date localrev child_date child_localrev child_idx/;
+	for my $r (@{$self->{revs}}) {
+		my $child_idx = 0;
+		my $user_idx = $self->{users}{ $r->{user} }{n};
+		my $H = $self->{users}{ $r->{user} }{H};
+		my $S = 0.03+0.93; # solid, max saturation colors for now
+
+		my $rgb = hsv2rgb($H, $S, 1) & 0x00ffffff; # clear alpha for gnuplot rgb var
+
+		for my $child_node (@{$r->{children}}) {
+			my $child = $by_node{$child_node};
+			say {$fh} join "\t", 
+				$user_idx, $r->{user}, $rgb, 
+				$r->{date}, $r->{localrev},
+				$child->{date}, $child->{localrev}, $child_idx++;
+		}
+	}
+	close $fh;
+
+	chdir($old_wd) or croak "error: can't chdir back to $old_wd";
+}
+
+# TODO rewrite this as includable gnuplot script
+sub print_users {
+	my ($self, $fn) = @_;
+
+	my $old_wd = getcwd();
+	chdir($self->{cache_dir}) or croak "error: can't chdir to cache dir $self->{cache_dir}";
+
+	my %counts;
+	for my $r (@{$self->{revs}}) {
+		$counts{$r->{user}}++;
+	}
+
+	open (my $fh, '>', $fn) or croak "can't open $fn";
+	say {$fh} '#' . join "\t", qw/user_idx user_name user_longname count h s v/;
+	for my $u (sort { $self->{users}{$a}{n} <=> $self->{users}{$b}{n} } keys %{$self->{users}}) {
+		my $user_idx = $self->{users}{ $u }{n};
+		my $H = $self->{users}{ $u }{H};
+		my $S = 0.03+0.93; # solid, max saturation colors for now
+		my $V = 1;
+
+		say {$fh} join "\t", $user_idx, $u, qq{"$self->{users}{$u}{user_longname}"}, $counts{$u}, $H, $S, $V;
+	}
+	close $fh;
+}
+
 sub hsv2rgb {
 	my ( $h, $s, $v ) = @_;
 	my ($r, $g, $b);
 
 	if ( $s == 0 ) {
 		($r, $g, $b) = ($v, $v, $v);
-		return (int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9);
+		return ((int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9)) | 0xff000000;
 	}
 
 	$h = ($h % 360) / 60;
