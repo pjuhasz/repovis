@@ -69,7 +69,8 @@ sub get_all_revs {
 	for my $line (@$out) {
 		my (@fields) = split /\x1f/, $line;
 		my $rev = {};
-		for (qw/ node rev user user_longname date desc branch p1rev p2rev /) {
+		# renaming fields here
+		for (qw/ node localrev user user_longname date desc branch p1rev p2rev /) {
 			$rev->{$_} = shift @fields;
 		}
 
@@ -88,7 +89,7 @@ sub get_author {
 	my @command = (
 		qw/hg log/,
 		'--cwd', $self->{root_dir}, 
-		'--template', '{author}',
+		'--template', '{author|user}',
 		$args{file}
 	);
 
