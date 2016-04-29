@@ -254,10 +254,10 @@ sub process_modified_file {
 	my @coord_list;
 	for my $line (@$blame) {
 		if (my ($user, $id, $crev) = ($line =~ / \s* (.*?) \s+ (\d+) \s+ ([\da-f]+): /x)) {
-			$self->{users}{$user} //= {
-				H => 360*rand(),
-				n => scalar keys %{$self->{users}},
-			};
+			#$self->{users}{$user} //= {
+			#	H => 360*rand(),
+			#	n => scalar keys %{$self->{users}},
+			#};
 
 			$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
 			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
@@ -331,10 +331,21 @@ sub process_added_file {
 	return (0, undef, undef) if $line_count == 0;
 
 	my $user = $self->{repo}->get_author(rev => $rev, file => $file);
-	$self->{users}{$user} //= {
-		H => 360*rand(),
-		n => scalar keys %{$self->{users}},
-	};
+	# work around merges?
+	if (length $user == 0) {
+		if (exists $self->{files}{$file}) {
+			use Data::Dumper;
+			$user = $self->{files}{$file}{coords}[0]{u};
+			warn "lofasz $file $user\n";
+		}
+		else {
+			carp "warning: file $file has no author apparently";
+		}
+	}
+	#$self->{users}{$user} //= {
+	#	H => 360*rand(),
+	#	n => scalar keys %{$self->{users}},
+	#};
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
 
@@ -519,7 +530,6 @@ sub get_and_save_full_log {
 	for my $this (@$revs) {
 		# collect users who ever touched the repo
 		$self->{users}{$this->{user}} //= {
-			H => 360*rand(),
 			n => scalar keys %{$self->{users}},
 			user_longname => $this->{user_longname},
 		};
@@ -533,6 +543,12 @@ sub get_and_save_full_log {
 		# TODO mark merge nodes somehow
 	}
 	# TODO nodes with >1 children
+
+	# assign pre-determined colors to users
+	my $n_users = scalar keys %{$self->{users}};
+	for my $u (sort { $self->{users}{$a}{n} <=> $self->{users}{$b}{n} } keys %{$self->{users}}) {
+		$self->{users}{$u}{H} = 10 + 340 * $self->{users}{$u}{n}/$n_users;
+	}
 
 	$self->{revs} = $revs;
 }
