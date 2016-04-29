@@ -86,7 +86,7 @@ sub analyze_all {
 	$self->analyze_one_rev($first->{rev});
 
 	$self->{relative_anal} = 1;
-	for my $rev (@{$self->{revs}}) {
+	for my $rev (@{$self->{revs}}[1..$#{$self->{revs}}]) {
 		$self->analyze_one_rev($rev->{rev});
 	}
 }
