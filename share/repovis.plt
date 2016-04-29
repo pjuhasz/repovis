@@ -1,28 +1,24 @@
-if (!exists("rev")) rev = "00001"
 
-fn(rev, mode) = '' . rev . '_' . mode . '.dat'
+maxdate = 1461950000 # TODO from include file
+maxrev = 1           # TODO from include file
 
-set termoption noenhanced
+if (!exists("rev")) rev = maxrev
 
-set size ratio -1
-set sty fill solid noborder
+strrev(rev) = sprintf("%05d", rev)
+fn(rev, mode) = '' . strrev(rev) . '_' . mode . '.dat'
 
-unset border
-unset xtics
-unset ytics
+boxrgb(uid, rev, cur_rev) = hsv2rgb(word(hues, uid)/360, 0.03+0.93*(rev>cur_rev?1:rev/cur_rev), 1)
 
-plotcmd = \
-	"set title (mode eq 'b'?'Blame':'File').' map for revision '.rev;" .\
-	"plot fn(rev, mode) binary filetype=avs flipy endian=little w rgbalpha notit," .\
-	"fn(rev, 'c') u 1:2:3:4 w vec nohead lc rgb 'gray' lw 2 notit," .\
-	"fn(rev, 'l') u 2:3:1 w labels center notit"
+# key bindings for interactive mode
+bind F 'mode = "f"; load "matrix.plt"'  
+bind B 'mode = "b"; load "matrix.plt"'  
+bind T 'load "timeline.plt"'
 
-bind F 'mode = "f"; eval plotcmd'  
-bind B 'mode = "b"; eval plotcmd'  
-
-# FIXME from real repo logs
-bind j '_rev = int(rev); _rev = _rev > 0     ? _rev-1 : _rev; rev = sprintf("%05d", _rev); eval plotcmd'
-bind k '_rev = int(rev); _rev = _rev < 10000 ? _rev+1 : _rev; rev = sprintf("%05d", _rev); eval plotcmd'
+# FIXME maxrev
+bind j 'rev = rev > 0     ? rev-1 : rev; load "matrix.plt"'
+bind k 'rev = rev < 10000 ? rev+1 : rev; load "matrix.plt"'
 
 mode = 'f'
-eval plotcmd
+load "matrix.plt"
+
+
