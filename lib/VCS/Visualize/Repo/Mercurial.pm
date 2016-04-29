@@ -52,9 +52,9 @@ sub get_all_revs {
 	my ($self) = @_;
 	# \x1f is the ASCII field separator character
 	# also, it would be nice to use the {children} template, but it's really slow
-	# p1rev, p2rev and date formatting is hg 2.4+
+	# p1node, p2node and date formatting is hg 2.4+
 	my $template =  join "\x1f", map { "{$_}" }
-		qw/ node|short rev author|user author/, 'date(date, "%s")', qw/ desc branch p1rev|short p2rev|short /;
+		qw/ node|short rev author|user author/, 'date(date|localdate, "%s")', qw/ desc branch p1node|short p2node|short /;
 	$template .= "\\n";
 	my @command = (
 		qw/hg log/,
@@ -63,7 +63,8 @@ sub get_all_revs {
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
-	return [] unless defined $out;
+	warn $err if $err;
+
 	my @revs;
 	for my $line (@$out) {
 		my (@fields) = split /\x1f/, $line;
@@ -149,7 +150,7 @@ sub blame {
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
-	return [] unless defined $out;
+	warn $err if $err;
 	return $out;
 }
 
