@@ -11,6 +11,8 @@ use POSIX qw/floor/;
 use Carp;
 use File::Spec;
 use Cwd;
+use FindBin;
+use File::Copy;
 
 use VCS::Visualize::Repo;
 use VCS::Visualize::BoundingRectangle;
@@ -83,8 +85,11 @@ sub analyze_all {
 
 	$self->get_and_save_full_log();
 
-	$self->print_revs('revs.dat'); # TODO also read and check cached data to avoid redoing revs that are still valid
-	$self->print_users('users.dat');
+	# TODO do this in a more generic place, not here
+	# TODO also read and check cached data to avoid redoing revs that are still valid
+	$self->print_revs('revs.dat');
+	$self->print_inc_file('params.inc');
+	$self->copy_static_files();
 
 	my $first = $self->{revs}[0];
 	$self->analyze_one_rev($first->{localrev});
@@ -563,8 +568,8 @@ sub print_revs {
 	chdir($old_wd) or croak "error: can't chdir back to $old_wd";
 }
 
-# TODO rewrite this as includable gnuplot script
-sub print_users {
+# gather, then print various information about the repo as a script gnuplot can include
+sub  print_inc_file {
 	my ($self, $fn) = @_;
 
 	my $old_wd = getcwd();
@@ -575,18 +580,39 @@ sub print_users {
 		$counts{$r->{user}}++;
 	}
 
-	open (my $fh, '>', $fn) or croak "can't open $fn";
-	say {$fh} '#' . join "\t", qw/user_idx user_name user_longname count h s v/;
+	my %str;
+	
+	$str{mindate} = $self->{revs}[ 0]{date};
+	$str{maxdate} = $self->{revs}[-1]{date};
+	$str{maxrev}  = $#{$self->{revs}};
+	$str{n_users} = scalar keys %{$self->{users}};
 	for my $u (sort { $self->{users}{$a}{n} <=> $self->{users}{$b}{n} } keys %{$self->{users}}) {
-		my $user_idx = $self->{users}{ $u }{n};
-		my $H = $self->{users}{ $u }{H};
-		my $S = 0.03+0.93; # solid, max saturation colors for now
-		my $V = 1;
-
-		say {$fh} join "\t", $user_idx, $u, qq{"$self->{users}{$u}{user_longname}"}, $counts{$u}, $H, $S, $V;
+		$str{names} .= $u . ' ';
+		$str{hues}  .= $self->{users}{ $u }{H} . ' ';
+		$str{counts} .= $counts{$u} . ' ';
+	}
+	
+	open (my $fh, '>', $fn) or croak "can't open $fn";
+	for my $key (sort keys %str) {
+		my $value = ($str{$key} =~ /\D/) ? qq{"$str{$key}"} : $str{$key}; 
+		say {$fh} "$key = $value";
 	}
 	close $fh;
 }
+
+sub copy_static_files {
+	my ($self) = @_;
+
+	# TODO figure out location after install
+	my $sharedir  = File::Spec->catfile($FindBin::Bin, '..', 'share');
+	my $targetdir = $self->{cache_dir};
+	for my $basename (qw/repovis.plt timeline.plt matrix.plt/) {
+		my $oldpath = File::Spec->catfile($sharedir,  $basename);
+		my $newpath = File::Spec->catfile($targetdir, $basename);
+		copy $oldpath, $newpath;
+	}
+}
+
 
 sub hsv2rgb {
 	my ( $h, $s, $v ) = @_;
