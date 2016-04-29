@@ -22,9 +22,13 @@
 # -- branch graph?
 # - show deletions by red lines between pixels?
 # + file mode colors should vary value, not just saturation
+# -- value could show line position (lighter towards end of file)?
+# - blame colors: does max saturation mean currently viewed rev, or max rev in repo?
+#   - current: then we should change the colors on the timeline too, which is tricky and confusing
+#     - timeline colors could be solid with max hue, but then we need a saturation legend on the blame plot itself
+#   - max rev: then blame graphs for early revs would be nearly white with no contrast
 # - sort files by date?
 # + cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
-# -- instead of getting all output lines, concatenating then splitting, provide callbacks to process by lines?
 # ++ or just simply return an aref of lines
 # + refactor all those max_x etc. calculations into an extent class or something
 # - git, svn? support
