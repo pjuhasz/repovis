@@ -38,7 +38,7 @@ sub new {
 	my %args = @_;
 
 	my $curve_module = $args{curve_module} // 'KochelCurve';
-	carp "error: '$curve_module' is not a valid Math::PlanePath module, it must be one of the following:\n" .
+	croak "error: '$curve_module' is not a valid Math::PlanePath module, it must be one of the following:\n" .
 	(join ", ", @curve_modules) . "\n" if not first {$_ eq $curve_module} @curve_modules;
 	my $curve_class = 'Math::PlanePath::'.$curve_module;
 	load $curve_class;
@@ -480,7 +480,7 @@ sub print_binary_matrices {
 sub print_files {
 	my ($self, $fn) = @_;
 
-	open (my $fh, '>', $fn) or carp "can't open $fn";
+	open (my $fh, '>', $fn) or croak "can't open $fn";
 	for my $file (sort keys %{$self->{files}}) {
 		next if $self->{files}{$file}{status} == 0;
 		my $basename = basename($file);
@@ -492,7 +492,7 @@ sub print_files {
 sub print_borders {
 	my ($self, $fn) = @_;
 
-	open (my $fh, '>', $fn) or carp "can't open $fn";
+	open (my $fh, '>', $fn) or croak "can't open $fn";
 	say {$fh} join "\t", @$_ for @{$self->{borders}};
 	close $fh;
 }
