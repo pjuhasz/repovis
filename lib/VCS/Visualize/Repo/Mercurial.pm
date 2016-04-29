@@ -90,6 +90,7 @@ sub get_author {
 		qw/hg log/,
 		'--cwd', $self->{root_dir}, 
 		'--template', '{author|user}',
+		'--rev', $rev,
 		$args{file}
 	);
 
