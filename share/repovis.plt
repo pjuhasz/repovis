@@ -1,6 +1,4 @@
-
-maxdate = 1461950000 # TODO from include file
-maxrev = 1           # TODO from include file
+load 'params.inc'
 
 if (!exists("rev")) rev = maxrev
 
@@ -14,9 +12,8 @@ bind F 'mode = "f"; load "matrix.plt"'
 bind B 'mode = "b"; load "matrix.plt"'  
 bind T 'load "timeline.plt"'
 
-# FIXME maxrev
-bind j 'rev = rev > 0     ? rev-1 : rev; load "matrix.plt"'
-bind k 'rev = rev < 10000 ? rev+1 : rev; load "matrix.plt"'
+bind j 'rev = rev > 0      ? rev-1 : rev; load "matrix.plt"'
+bind k 'rev = rev < maxrev ? rev+1 : rev; load "matrix.plt"'
 
 mode = 'f'
 load "matrix.plt"

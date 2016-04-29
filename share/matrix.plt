@@ -2,11 +2,13 @@ set termoption noenhanced
 
 set size ratio -1
 set sty fill solid noborder
+set autoscale
 
 unset xdata
 unset border
 unset xtics
 unset ytics
+unset y2tics
 
 set title (mode eq 'b'?'Blame':'File').' map for revision '.rev
 
