@@ -86,21 +86,6 @@ sub get_all_revs {
 	return \@revs;
 }
 
-sub get_author {
-	my ($self, %args) = @_;
-	my $rev = $args{rev} // $self->{orig_rev};
-	my @command = (
-		qw/hg log/,
-		'--cwd', $self->{root_dir}, 
-		'--template', '{author|user}',
-		'--rev', $rev,
-		$args{file}
-	);
-
-	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
-	return join "", @$out;
-}
-
 sub files {
 	my ($self, %args) = @_;
 	my @exclude = map { ('-X', $_) } @{$self->{exclude}};
