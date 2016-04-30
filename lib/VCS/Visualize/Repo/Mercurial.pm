@@ -125,6 +125,7 @@ sub files {
 	return \@files;
 }
 
+# get the number of lines in a file in a specific revision
 sub line_count {
 	my ($self, %args) = @_;
 	my $rev = $args{rev} // $self->{orig_rev};
@@ -138,10 +139,18 @@ sub line_count {
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 
 	return 0 if scalar @$out == 0;
+	my $count;
 	for (@$out) {
 		return -1 if -1 != index $_, "\0"; # heuristic used by HG to check for binary files
+
+		# Complication: one of the reasons why hg cat is fast 
+		# is that it actually sends the file's content back in one chunk
+		# (on the versions tested so far).
+		# This means that CmdServer will also return it in one element, 
+		# so we have to count the newlines ourselves.
+		$count += tr/\n// + !/\n\z/;
 	}
-	return scalar @$out;
+	return $count;
 }
 
 sub blame {
