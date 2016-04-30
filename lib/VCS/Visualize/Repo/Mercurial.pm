@@ -54,7 +54,9 @@ sub get_all_revs {
 	# also, it would be nice to use the {children} template, but it's really slow
 	# p1node, p2node and date formatting is hg 2.4+
 	my $template =  join "\x1f", map { "{$_}" }
-		qw/ node|short rev author|user author/, 'date(date|localdate, "%s")', qw/ desc branch p1node|short p2node|short /;
+		qw/ node|short rev author|user author/, 
+		'date(date|localdate, "%s")', 
+		qw/ desc branch p1node|short p2node|short p1rev p2rev/;
 	$template .= "\\n";
 	my @command = (
 		qw/hg log/,
@@ -70,12 +72,13 @@ sub get_all_revs {
 		my (@fields) = split /\x1f/, $line;
 		my $rev = {};
 		# renaming fields here
-		for (qw/ node localrev user user_longname date desc branch p1rev p2rev /) {
+		for (qw/ node localrev user user_longname date desc branch p1node p2node p1rev p2rev/) {
 			$rev->{$_} = shift @fields;
 		}
 
-		$rev->{parents}  = [ $rev->{p1rev}, $rev->{p2rev} ];
-		delete $rev->{p1rev}; delete $rev->{p2rev}; 
+		$rev->{parents}[0]  = $rev->{p1node};
+		$rev->{parents}[1]  = $rev->{p2node} if $rev->{p2rev} > -1;
+		delete $rev->{$_} for qw/p1rev p2rev p1node p2node/;
 
 		push @revs, $rev;
 	}
