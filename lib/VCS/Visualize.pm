@@ -92,11 +92,11 @@ sub analyze_all {
 	$self->copy_static_files();
 
 	my $first = $self->{revs}[0];
-	$self->analyze_one_rev($first->{localrev});
+	$self->analyze_one_rev($first->{node});
 
 	$self->{relative_anal} = 1;
 	for my $rev (@{$self->{revs}}[1..$#{$self->{revs}}]) {
-		$self->analyze_one_rev($rev->{localrev});
+		$self->analyze_one_rev($rev->{node});
 	}
 }
 
@@ -107,7 +107,8 @@ sub analyze_one_rev {
 
 	$self->{max_numeric_id} = 0+$self->{repo}->numeric_id(rev => $rev);
 
-	print "processing revision $rev\n" if $self->{verbose} > 0;
+	my $localrev = $self->{revs_by_node}{$rev}{localrev};
+	print "processing revision $localrev:$rev\n" if $self->{verbose} > 0;
 
 	# keep previously collected file data, but mark them invalid
 	for my $file (keys %{$self->{files}}) {
@@ -325,14 +326,15 @@ sub process_added_file {
 	
 	return (0, undef, undef) if $line_count == 0;
 
-	my $user = $self->{repo}->get_author(rev => $rev, file => $file);
+	my $rev_data = $self->{revs_by_node}{$rev};
+	my $user = $rev_data->{user};
+
 	# work around merges?
-	if (length $user == 0) {
-		if (exists $self->{files}{$file}) {
-			$user = $self->{files}{$file}{coords}[0]{u};
-		}
-		else {
-			carp "warning: file $file has no author apparently";
+	if (exists $self->{files}{$file} and exists $self->{files}{$file}{coords}) {
+		my $olduser = $self->{files}{$file}{coords}[0]{u};
+		if (defined $olduser and $olduser ne $user) {
+			carp "file $file preserving old author $olduser over $user\n" if $self->{verbose} > 1;
+			$user = $olduser;
 		}
 	}
 
@@ -515,7 +517,6 @@ sub get_and_save_full_log {
 
 	# TODO perhaps this should go in the repo-specific module?
 	# walking the graph to get merge nodes, nodes with more than one children etc.
-	my %by_node = map { $_->{node} => $_ } @$revs;
 	for my $this (@$revs) {
 		# collect users who ever touched the repo
 		$self->{users}{$this->{user}} //= {
@@ -526,7 +527,7 @@ sub get_and_save_full_log {
 		# calculate which nodes this node is a child 
 		$this->{children} = [];
 		for my $parent_node (@{$this->{parents}}) {
-			my $parent = $by_node{$parent_node};
+			my $parent = $self->{revs_by_node}{$parent_node};
 			push @{$parent->{children}}, $this->{node};
 		}
 		# TODO mark merge nodes somehow
@@ -540,12 +541,13 @@ sub get_and_save_full_log {
 	}
 
 	$self->{revs} = $revs;
+	
+	my %by_node = map { $_->{node} => $_ } @{$self->{revs}};
+	$self->{revs_by_node} = \%by_node;
 }
 
 sub print_revs {
 	my ($self, $fn) = @_;
-
-	my %by_node = map { $_->{node} => $_ } @{$self->{revs}};
 
 	my $old_wd = getcwd();
 	chdir($self->{cache_dir}) or croak "error: can't chdir to cache dir $self->{cache_dir}";
@@ -561,7 +563,7 @@ sub print_revs {
 		my $rgb = hsv2rgb($H, $S, 1) & 0x00ffffff; # clear alpha for gnuplot rgb var
 
 		for my $child_node (@{$r->{children}}) {
-			my $child = $by_node{$child_node};
+			my $child = $self->{revs_by_node}{$child_node};
 			say {$fh} join "\t", 
 				$user_idx, $r->{user}, $rgb, 
 				$r->{date}, $r->{localrev},
