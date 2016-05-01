@@ -515,6 +515,9 @@ sub get_and_save_full_log {
 
 	my $revs = $self->{repo}->get_all_revs();
 
+	# create a by node hash lookup too
+	my %by_node = map { $_->{node} => $_ } @$revs; 
+
 	# TODO perhaps this should go in the repo-specific module?
 	# walking the graph to get merge nodes, nodes with more than one children etc.
 	for my $this (@$revs) {
@@ -525,9 +528,9 @@ sub get_and_save_full_log {
 		};
 		
 		# calculate which nodes this node is a child 
-		$this->{children} = [];
+		$this->{children} //= [];
 		for my $parent_node (@{$this->{parents}}) {
-			my $parent = $self->{revs_by_node}{$parent_node};
+			my $parent = $by_node{$parent_node};
 			push @{$parent->{children}}, $this->{node};
 		}
 		# TODO mark merge nodes somehow
@@ -541,8 +544,7 @@ sub get_and_save_full_log {
 	}
 
 	$self->{revs} = $revs;
-	
-	my %by_node = map { $_->{node} => $_ } @{$self->{revs}};
+
 	$self->{revs_by_node} = \%by_node;
 }
 
