@@ -63,6 +63,7 @@ sub new {
 		cached_n_to_xy => [],
 		relative_anal => 0,
 		verbose => $args{verbose},
+		init_done => 0,
 	};
 
 	srand(1234);
@@ -81,16 +82,25 @@ sub new {
 	return $self;
 }
 
-sub analyze_all {
+sub init {
 	my ($self) = @_;
+
+	print "processing revision graph\n" if $self->{verbose} > 0;
 
 	$self->get_and_save_full_log();
 
-	# TODO do this in a more generic place, not here
 	# TODO also read and check cached data to avoid redoing revs that are still valid
 	$self->print_revs('revs.dat');
 	$self->print_inc_file('params.inc');
 	$self->copy_static_files();
+
+	$self->{init_done} = 1;
+}
+
+sub analyze_all {
+	my ($self) = @_;
+
+	$self->init() if not $self->{init_done};
 
 	$self->{relative_anal} = 1;
 
@@ -101,6 +111,8 @@ sub analyze_all {
 
 sub analyze_one_rev {
 	my ($self, $rev) = @_;
+
+	$self->init() if not $self->{init_done};
 
 	$rev //= $self->{repo}->current_rev();
 
