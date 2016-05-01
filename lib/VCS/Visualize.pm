@@ -13,6 +13,7 @@ use File::Spec;
 use Cwd;
 use FindBin;
 use File::Copy;
+use Storable qw/dclone/;
 
 use VCS::Visualize::Repo;
 use VCS::Visualize::BoundingRectangle;
@@ -110,6 +111,13 @@ sub analyze_one_rev {
 	my $localrev = $self->{revs_by_node}{$rev}{localrev};
 	print "processing revision $localrev:$rev\n" if $self->{verbose} > 0;
 
+	# check if we have to use a different saved files data
+
+	if (defined $self->{revs_by_node}{$rev}{use_saved_data}) {
+		my $which = $self->{revs_by_node}{$rev}{use_saved_data};
+		$self->{files} = $self->{revs_by_node}{$which}{saved_files};
+	}
+
 	# keep previously collected file data, but mark them invalid
 	for my $file (keys %{$self->{files}}) {
 		$self->{files}{$file}{status} = 0;
@@ -140,6 +148,12 @@ sub analyze_one_rev {
 	$self->trace_borders();
 	
 	$self->to_disk($rev);
+
+	# check if we have to save the files data we've collected
+	# we have to use deep cloning here!
+	if ($self->{revs_by_node}{$rev}{must_save_data}) {
+		$self->{revs_by_node}{$rev}{saved_files} = dclone $self->{files};
+	}
 }
 
 # private methods
@@ -527,15 +541,39 @@ sub get_and_save_full_log {
 			user_longname => $this->{user_longname},
 		};
 		
-		# calculate which nodes this node is a child 
+		# calculate which nodes this node is a child of
 		$this->{children} //= [];
 		for my $parent_node (@{$this->{parents}}) {
 			my $parent = $by_node{$parent_node};
 			push @{$parent->{children}}, $this->{node};
 		}
-		# TODO mark merge nodes somehow
 	}
-	# TODO nodes with >1 children
+
+	# Set flags for relative analysis mode:
+	# Normally we'd use the data in $self->{files} gathered during processing the 
+	# previous rev as a base for processing unchanged files,
+	# however, this doesn't work if the parent of the current rev is not the previous one.
+	# Therefore for every node that has a child that is not the next one, we have to save
+	# the files hashref, and when we process those children, we have to use the saved data 
+	# instead of the usual files hashref (that contains data from the chronologically previous,
+	# but topologically unrelated revision).
+	# Here we mark those revisions that need to save their data after being processed,
+	# and those that need to use saved data before starting processing.
+	for my $i (1..$#$revs) {
+		my $this = $revs->[$i];
+		my $prev = $revs->[$i-1];
+
+		# changeset data we get from the VCS is calculated relative to the first parent
+		# FIXME is this true in git?
+		if ($this->{parents}[0] ne $prev->{node}) {
+			$this->{use_saved_data} = $prev->{node};
+			$prev->{must_save_data} = 1;
+		}
+		else {
+			$this->{use_saved_data} = undef;
+			$prev->{must_save_data} = 0;
+		}
+	}
 
 	# assign pre-determined colors to users
 	my $n_users = scalar keys %{$self->{users}};
