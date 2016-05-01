@@ -133,7 +133,8 @@ sub line_count {
 		# (on the versions tested so far).
 		# This means that CmdServer will also return it in one element, 
 		# so we have to count the newlines ourselves.
-		$count += tr/\n// + !/\n\z/;
+		# Note that runcommand chomps the buffer, so we have to add the last newline back.
+		$count += tr/\n// + 1;
 	}
 	return $count;
 }
