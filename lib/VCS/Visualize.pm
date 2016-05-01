@@ -123,7 +123,7 @@ sub analyze_one_rev {
 
 	# check if we have to use a different saved files data
 
-	if (defined $self->{revs_by_node}{$rev}{use_saved_data}) {
+	if ($self->{relative_anal} and defined $self->{revs_by_node}{$rev}{use_saved_data}) {
 		my $which = $self->{revs_by_node}{$rev}{use_saved_data};
 		$self->{files} = $self->{revs_by_node}{$which}{saved_files};
 	}
@@ -161,7 +161,7 @@ sub analyze_one_rev {
 
 	# check if we have to save the files data we've collected
 	# we have to use deep cloning here!
-	if ($self->{revs_by_node}{$rev}{must_save_data}) {
+	if ($self->{relative_anal} and $self->{revs_by_node}{$rev}{must_save_data}) {
 		$self->{revs_by_node}{$rev}{saved_files} = dclone $self->{files};
 	}
 }
@@ -570,18 +570,19 @@ sub get_and_save_full_log {
 	# Here we mark those revisions that need to save their data after being processed,
 	# and those that need to use saved data before starting processing.
 	for my $i (1..$#$revs) {
-		my $this = $revs->[$i];
-		my $prev = $revs->[$i-1];
+		my $this   = $revs->[$i];
+		my $prev   = $revs->[$i-1];
+		my $parent = $by_node{ $this->{parents}[0] };
 
 		# changeset data we get from the VCS is calculated relative to the first parent
 		# FIXME is this true in git?
-		if ($this->{parents}[0] ne $prev->{node}) {
-			$this->{use_saved_data} = $prev->{node};
-			$prev->{must_save_data} = 1;
+		if ($parent->{node} ne $prev->{node}) {
+			$this->{use_saved_data} = $parent->{node};
+			$parent->{must_save_data} = 1;
 		}
 		else {
 			$this->{use_saved_data} = undef;
-			$prev->{must_save_data} = 0;
+			$parent->{must_save_data} = 0;
 		}
 	}
 
