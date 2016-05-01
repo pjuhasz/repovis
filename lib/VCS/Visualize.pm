@@ -304,17 +304,26 @@ sub process_modified_file {
 sub process_unchanged_file {
 	my ($self, $file, $rev) = @_;
 
-	my $extent = VCS::Visualize::BoundingRectangle->new;
-
 	return (0, undef, undef) if $self->{files}{$file}{binary};
 	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
 	return (0, undef, undef) if $length == 0;
+
+	my $coord_list = $self->{files}{$file}{coords};
 
 	my $start = $self->{lcnt};
 	$self->{lcnt} += $length;
 	my $end = $self->{lcnt};
 
-	my $coord_list = $self->{files}{$file}{coords};
+	# if the cached starting position of the file is the same as the current line count,
+	# then the coordinate mapping has not changed so far in this rev,
+	# so we don't have to recalculate coordinates for this file either,
+	# we can happily bail out.
+	if ($self->{files}{$file}{start_lcnt} == $start) {
+		return (1, $coord_list, $self->{files}{$file}{extent});
+	}
+
+	my $extent = VCS::Visualize::BoundingRectangle->new;
+
 	for my $lcnt ($start..$end-1) {
 			$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
 			my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
