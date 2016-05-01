@@ -1,44 +1,5 @@
 #!/usr/bin/perl
 
-# TODO:
-# - documentation
-# -- nice animgif for peasant blinding
-# + track extent of graph (done in extent.pl)
-# + outline of file blobs in blame mode (done in extent.pl)
-# -- directories?
-# + write binary matrices instead of one long line of data per source line
-# -- png directly?
-# + support for different curves as a startup option
-# + revision, exclude, include as options
-# - modes:
-# ++ analyze that produces blame and file mode data for all revisions, cache it in .repovis
-# +++ keep some of the file, user etc. data between revisions for performance and consistency
-# +++ use hg stat --change REV to get changed/added/deleted files, and hg blame --rev REV only those files, keep track of the rest
-# --- but this mode is broken because of branches
-# ---- check if there are >1 children or the one child is not the next one, in these cases save $self->{files} in
-#      $self->{revs}{saved_files}, and mark this rev as need_to_save_files, and mark the child revs as need_to_use_saved_files
-#      the marked child revs need to copy the saved files struct from the cache to the current files struct
-# -- interactive mode that just launches the gnuplot with the cached data (default when ran without parameters)
-# -- non-interactive parametric mode to generate image for just one rev
-# -- animate to create animations from images
-# + commit timeline with the same user/hue, commit/saturation colors as blame mode
-# -- branch graph?
-# - show deletions by red lines between pixels?
-# + file mode colors should vary value, not just saturation
-# -- value could show line position (lighter towards end of file)?
-# --- this would need a new key in the pt struct, and to move the hsv2rgb call back to matrix print (with some perf loss)
-# - blame colors: does max saturation mean currently viewed rev, or max rev in repo?
-#   - current: then we should change the colors on the timeline too, which is tricky and confusing
-#     - timeline colors could be solid with max hue, but then we need a saturation legend on the blame plot itself
-#   - max rev: then blame graphs for early revs would be nearly white with no contrast
-# + sort files by date?
-# - for modified files in relative mode, parse diff (just the @@ lines are enough) instead of full blame
-# + cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
-# ++ or just simply return an aref of lines
-# + refactor all those max_x etc. calculations into an extent class or something
-# - git, svn? support
-# ? js+html output? (yuck)
-
 use 5.010001;
 use strict;
 use warnings;
