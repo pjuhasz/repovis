@@ -92,11 +92,9 @@ sub analyze_all {
 	$self->print_inc_file('params.inc');
 	$self->copy_static_files();
 
-	my $first = $self->{revs}[0];
-	$self->analyze_one_rev($first->{node});
-
 	$self->{relative_anal} = 1;
-	for my $rev (@{$self->{revs}}[1..$#{$self->{revs}}]) {
+
+	for my $rev (@{$self->{revs}}) {
 		$self->analyze_one_rev($rev->{node});
 	}
 }
