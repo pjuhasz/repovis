@@ -184,11 +184,13 @@ sub do_one_file {
 		$self->{filetypes}{$ext}{H} //= 320 * rand();
 
 		# assign a color to this file and use it on all plots in the future
-		$self->{files}{$file}{rgb} = hsv2rgb(
-				36 * rand() + $self->{filetypes}{$ext}{H},
-				0.4+0.2*rand(),
-				0.7+0.2*rand(),
-			);
+		my $H = 36 * rand() + $self->{filetypes}{$ext}{H};
+		my $S = 0.4+0.2*rand();
+		my $V = 0.7+0.2*rand();
+		$self->{files}{$file}{rgb} = hsv2rgb($H, $S, $V);
+		$self->{files}{$file}{H} = $H;
+		$self->{files}{$file}{S} = $S;
+		$self->{files}{$file}{V} = $V;
 	}
 
 	# cautiously mark it as invalid/not present for now
@@ -290,6 +292,7 @@ sub process_modified_file {
 								i => $id,
 								u => $user,
 								f => $file,
+								n => $self->{lcnt} - $self->{files}{$file}{start_lcnt},
 							};
 
 			$self->{lcnt}++;
@@ -390,6 +393,7 @@ sub process_added_file {
 								i => $self->{max_numeric_id},
 								u => $user,
 								f => $file,
+								n => $lcnt - $start,
 							};
 	}
 
@@ -492,10 +496,15 @@ sub print_binary_matrices {
 		for my $x (1..$self->{xs}+1) {
 			if ( exists $row->[$x] ) {
 				my $pt = $row->[$x];
+				my $fc = $self->{files}{ $pt->{f} };
 				$outbuffer_f .= pack 'L>',
 					($pt->{i} == $self->{max_numeric_id} ?
 					$self->{commit_rgb} :
-					$self->{files}{ $pt->{f} }{rgb});
+					hsv2rgb(
+						$fc->{H},
+						$fc->{S},
+						$fc->{V} - 0.25*($pt->{n}/($fc->{end_lcnt}-$fc->{start_lcnt}))
+					));
 
 				$outbuffer_b .= pack 'L>', hsv2rgb(
 					$self->{users}{ $pt->{u} }{H},
