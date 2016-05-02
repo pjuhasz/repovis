@@ -213,7 +213,7 @@ sub do_one_file {
 		# - removed files we mark as invalid, drop from processing
 		my $s = $file_data->{status};
 		if ($s eq 'M') {
-			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
+			($success, $coord_list, $extent) = $self->process_file_blame($file, $rev);
 		}
 		elsif ($s eq 'A') {
 			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
@@ -238,7 +238,7 @@ sub do_one_file {
 
 		print " processing new file $file\n" if $self->{verbose} > 1;
 
-		($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
+		($success, $coord_list, $extent) = $self->process_file_blame($file, $rev);
 	}
 	return if $success == FILE_PROCESSING_FAILED;
 
@@ -261,7 +261,7 @@ sub do_one_file {
 	$self->{files}{$file}{extent} = $extent;
 }
 
-sub process_modified_file {
+sub process_file_blame {
 	my ($self, $file, $rev) = @_;
 
 	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
@@ -306,6 +306,115 @@ sub process_modified_file {
 	$self->{files}{$file}{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
 
 	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
+}
+
+# TODO write this DRYer
+sub process_modified_file {
+	my ($self, $file, $rev) = @_;
+
+	my $diff = $self->{repo}->diff(file => $file, rev => $rev);
+	if (@$diff == 0) {
+		return $self->process_unchanged_file($file, $rev); # empty diff means no change
+	}
+	elsif ($diff->[1] =~ /binary file/i) {
+		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
+		return (FILE_PROCESSING_FAILED, undef, undef);
+	}
+	else {
+		# not binary (anymore? the old binary file might have been
+		# replaced by a text file of the same name), clear the taint
+		$self->{files}{$file}{binary} = 0;
+	}
+
+	my $extent = VCS::Visualize::BoundingRectangle->new;
+
+	$self->{files}{$file}{start_lcnt} = $self->{lcnt};
+
+	my $old_coord_list = $self->{files}{$file}{coords};
+	my $coord_list = [];
+	my $oldc = 0; my $newc = 0;
+	my $old_length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+
+	my $rev_data = $self->{revs_by_node}{$rev};
+	my $user = $rev_data->{user};
+
+	warn "xxxxxx $file $old_length ".(scalar @$old_coord_list)."\n";
+	warn "yyyyyy\n" if $old_length != scalar @$old_coord_list;
+	for my $line (@$diff) {
+		if (my ($l1, $s1, $l2, $s2) = ($line =~ /^\@\@ \s - (\d+),?(\d*) \s \+ (\d+),?(\d*) \s \@\@/x)) {
+			warn " $line\n";
+			$s1 = 1 if $s1 eq '';
+			$s2 = 1 if $s2 eq '';
+			warn "  $l1 $s1 $l2 $s2\n";
+			warn "  before $oldc $newc $self->{lcnt}\n";
+			
+			# update the coordinates for the lines before this hunk,
+			# keep revision and user data
+			for my $i ($oldc .. $l1-1) {
+				$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
+				my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
+
+				$extent->update_xy($x, $y);
+
+				$coord_list->[$newc] = $old_coord_list->[$oldc];
+				$coord_list->[$newc]{X} = $x;
+				$coord_list->[$newc]{Y} = $y;
+				$coord_list->[$newc]{n} = $newc;
+				# keep the rest
+
+				$newc++;
+				$oldc++;
+				$self->{lcnt}++;
+			}
+
+			warn "  during $oldc $newc $self->{lcnt}\n";
+
+
+			# apply the hunk, drop $s1 lines, add $s2 lines with current rev and user
+			for my $i (1..$s2) {
+				$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
+				my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
+
+				$extent->update_xy($x, $y);
+
+				push @$coord_list, {
+									X => $x,
+									Y => $y,
+									i => $self->{max_numeric_id},
+									u => $user,
+									f => $file,
+									n => $newc,
+								};
+				$self->{lcnt}++;
+			}
+			$oldc += $s1;
+			$newc += $s2;
+			warn "  after  $oldc $newc $self->{lcnt}\n";
+		}
+	}
+
+	for my $i ($oldc .. $old_length-1) {
+		$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
+		my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
+
+		$extent->update_xy($x, $y);
+
+		$coord_list->[$newc] = $old_coord_list->[$oldc];
+		$coord_list->[$newc]{X} = $x;
+		$coord_list->[$newc]{Y} = $y;
+		$coord_list->[$newc]{n} = $newc;
+		# keep the rest
+
+		$newc++;
+		$oldc++;
+		$self->{lcnt}++;
+	}
+	warn "  final  $oldc $newc $self->{lcnt}\n";
+
+
+	$self->{files}{$file}{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
+
+	return (FILE_PROCESSING_SUCCESSFUL, $coord_list, $extent);
 }
 
 sub process_unchanged_file {
