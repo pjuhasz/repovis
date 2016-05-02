@@ -155,6 +155,21 @@ sub blame {
 	return $out;
 }
 
+sub diff {
+	my ($self, %args) = @_;
+	my $rev = $args{rev} // $self->{orig_rev};
+	my @command = (
+		qw/hg diff -U 0/,
+		'--cwd', $self->{root_dir},
+		'--change', $rev,
+		$args{file}
+	);
+
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
+	warn $err if $err;
+	return $out;
+}
+
 sub DESTROY {
 	
 }
