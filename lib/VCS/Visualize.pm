@@ -18,6 +18,9 @@ use Storable qw/dclone/;
 use VCS::Visualize::Repo;
 use VCS::Visualize::BoundingRectangle;
 
+use constant FILE_PROCESSING_FAILED => 0;
+use constant FILE_PROCESSING_SUCCESSFUL => 1;
+use constant FILE_PROCESSING_UNCHANGED => 2;
 
 our $VERSION = '0.01';
 
@@ -238,15 +241,18 @@ sub do_one_file {
 
 		($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
 	}
-	return unless $success;
-	
+	return if $success == FILE_PROCESSING_FAILED;
+
+	$self->{files}{$file}{status} = 1;
+	return if $success == FILE_PROCESSING_UNCHANGED;
+
 	# calculate center of the region occupied by this file, for the name label
 	my ($xmean, $ymean) = (0, 0);
 	for my $pt (@$coord_list) {
 		$xmean += $pt->{X};
 		$ymean += $pt->{Y};
 	}
-	
+
 	# save data
 	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
 	$xmean /= $length;
@@ -254,7 +260,6 @@ sub do_one_file {
 	$self->{files}{$file}{coords} = $coord_list;
 	$self->{files}{$file}{center} = [$xmean, $ymean];
 	$self->{files}{$file}{extent} = $extent;
-	$self->{files}{$file}{status} = 1;
 }
 
 sub process_modified_file {
@@ -262,11 +267,11 @@ sub process_modified_file {
 
 	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
 	if (@$blame == 0) {
-		return (0, undef, undef); # empty file, skip it
+		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
 	}
 	elsif ($blame->[0] =~ /binary file/) {
 		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
-		return (0, undef, undef);
+		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
 	else {
 		# not binary (anymore? the old binary file might have been
@@ -301,15 +306,15 @@ sub process_modified_file {
 
 	$self->{files}{$file}{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
 
-	return (1, \@coord_list, $extent);
+	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
 }
 
 sub process_unchanged_file {
 	my ($self, $file, $rev) = @_;
 
-	return (0, undef, undef) if $self->{files}{$file}{binary};
+	return (FILE_PROCESSING_FAILED, undef, undef) if $self->{files}{$file}{binary};
 	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
-	return (0, undef, undef) if $length == 0;
+	return (FILE_PROCESSING_FAILED, undef, undef) if $length == 0;
 
 	my $coord_list = $self->{files}{$file}{coords};
 
@@ -320,9 +325,10 @@ sub process_unchanged_file {
 	# if the cached starting position of the file is the same as the current line count,
 	# then the coordinate mapping has not changed so far in this rev,
 	# so we don't have to recalculate coordinates for this file either,
-	# we can happily bail out.
+	# we can happily bail out. We return a special flag so that the 
+	# coords, extent, center etc. data don't have to be recalculated.
 	if ($self->{files}{$file}{start_lcnt} == $start) {
-		return (1, $coord_list, $self->{files}{$file}{extent});
+		return (FILE_PROCESSING_UNCHANGED, $coord_list, $self->{files}{$file}{extent});
 	}
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
@@ -342,7 +348,7 @@ sub process_unchanged_file {
 	$self->{files}{$file}{start_lcnt} = $start;
 	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
 
-	return (1, $coord_list, $extent);
+	return (FILE_PROCESSING_SUCCESSFUL, $coord_list, $extent);
 }
 
 sub process_added_file {
@@ -350,17 +356,17 @@ sub process_added_file {
 
 	my $line_count = $self->{repo}->line_count(rev => $rev, file => $file);
 	if ($line_count == 0) {
-		return (0, undef, undef); # empty file, skip it
+		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
 	}
 	elsif ($line_count == -1) {
 		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
-		return (0, undef, undef);
+		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
 	else {
 		$self->{files}{$file}{binary} = 0;
 	}
 	
-	return (0, undef, undef) if $line_count == 0;
+	return (FILE_PROCESSING_FAILED, undef, undef) if $line_count == 0;
 
 	my $rev_data = $self->{revs_by_node}{$rev};
 	my $user = $rev_data->{user};
@@ -400,7 +406,7 @@ sub process_added_file {
 	$self->{files}{$file}{start_lcnt} = $start;
 	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
 
-	return (1, \@coord_list, $extent);
+	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
 }
 
 sub grids_from_coords {
