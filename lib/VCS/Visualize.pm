@@ -122,10 +122,10 @@ sub analyze_one_rev {
 	print "processing revision $localrev:$rev\n" if $self->{verbose} > 0;
 
 	# check if we have to use a different saved files data
-
+	# we must use dclone here, because more than one children might depend on this data
 	if ($self->{relative_anal} and defined $self->{revs_by_node}{$rev}{use_saved_data}) {
 		my $which = $self->{revs_by_node}{$rev}{use_saved_data};
-		$self->{files} = $self->{revs_by_node}{$which}{saved_files};
+		$self->{files} = dclone $self->{revs_by_node}{$which}{saved_files};
 	}
 
 	# keep previously collected file data, but mark them invalid
