@@ -485,7 +485,7 @@ sub print_binary_matrices {
 	my ($self, %args) = @_;
 
 	# cargo cult code to pre-allocate buffers
-	my $length = ($self->{xs} + 1) * ($self->{ys} + 1) + 8;
+	my $length = 4 * ($self->{xs} + 1) * ($self->{ys} + 1) + 8;
 	
 	my $outbuffer_f = "";
 	vec($outbuffer_f, $length, 8)=0;
