@@ -82,7 +82,8 @@ sub get_all_revs {
 
 		push @revs, $rev;
 	}
-	@revs = sort { $a->{date} cmp $b->{date} } @revs;
+	# sorting by date is unreliable (different timezones, rebases etc.)
+	@revs = sort { $a->{localrev} <=> $b->{localrev} } @revs;
 	return \@revs;
 }
 
