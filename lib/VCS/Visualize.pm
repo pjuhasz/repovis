@@ -190,7 +190,6 @@ sub do_one_file {
 		my $H = 36 * rand() + $self->{filetypes}{$ext}{H};
 		my $S = 0.4+0.2*rand();
 		my $V = 0.7+0.2*rand();
-		$self->{files}{$file}{rgb} = hsv2rgb($H, $S, $V);
 		$self->{files}{$file}{H} = $H;
 		$self->{files}{$file}{S} = $S;
 		$self->{files}{$file}{V} = $V;
@@ -496,6 +495,7 @@ sub print_binary_matrices {
 	$outbuffer_b = "";
 
 	my $transparent_white = pack 'L>', 0x00ffffff;
+	my $commit_red = pack 'L>', $self->{commit_rgb};
 
 	for my $y (1..$self->{ys}+1) {
 		my $row = $self->{grid}[$y];
@@ -503,16 +503,15 @@ sub print_binary_matrices {
 			if ( exists $row->[$x] ) {
 				my $pt = $row->[$x];
 				my $fc = $self->{files}{ $pt->{f} };
-				$outbuffer_f .= pack 'L>',
-					($pt->{i} == $self->{max_numeric_id} ?
-					$self->{commit_rgb} :
-					hsv2rgb(
+				$outbuffer_f .= ($pt->{i} == $self->{max_numeric_id}) ?
+					$commit_red :
+					pack 'C4', 0xff, hsv2rgb(
 						$fc->{H},
 						$fc->{S},
 						$fc->{V} - 0.25*($pt->{n}/($fc->{end_lcnt}-$fc->{start_lcnt}))
-					));
+					);
 
-				$outbuffer_b .= pack 'L>', hsv2rgb(
+				$outbuffer_b .= pack 'C4', 0xff, hsv2rgb(
 					$self->{users}{ $pt->{u} }{H},
 					0.03+0.93*$pt->{i}/($self->{max_numeric_id}||1),
 					1
@@ -629,19 +628,20 @@ sub print_revs {
 
 	open (my $fh, '>', $fn) or croak "can't open $fn";
 	say {$fh} '#' . join "\t", qw/user_idx user_name rgb date localrev child_date child_localrev child_idx/;
-	for my $r (@{$self->{revs}}) {
+	for my $rev (@{$self->{revs}}) {
 		my $child_idx = 0;
-		my $user_idx = $self->{users}{ $r->{user} }{n};
-		my $H = $self->{users}{ $r->{user} }{H};
+		my $user_idx = $self->{users}{ $rev->{user} }{n};
+		my $H = $self->{users}{ $rev->{user} }{H};
 		my $S = 0.03+0.93; # solid, max saturation colors for now
 
-		my $rgb = hsv2rgb($H, $S, 1) & 0x00ffffff; # clear alpha for gnuplot rgb var
+		my ($r, $g, $b) = hsv2rgb($H, $S, 1);
+		my $rgb = ($r<<16) + ($g<<8) + $b;
 
-		for my $child_node (@{$r->{children}}) {
+		for my $child_node (@{$rev->{children}}) {
 			my $child = $self->{revs_by_node}{$child_node};
 			say {$fh} join "\t", 
-				$user_idx, $r->{user}, $rgb, 
-				$r->{date}, $r->{localrev},
+				$user_idx, $rev->{user}, $rgb, 
+				$rev->{date}, $rev->{localrev},
 				$child->{date}, $child->{localrev}, $child_idx++;
 		}
 	}
@@ -701,8 +701,8 @@ sub hsv2rgb {
 	my ($r, $g, $b);
 
 	if ( $s == 0 ) {
-		($r, $g, $b) = ($v, $v, $v);
-		return ((int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9)) | 0xff000000;
+		$r = int($v*255.9);
+		return ($r, $r, $r);
 	}
 
 	$h = ($h % 360) / 60;
@@ -730,7 +730,7 @@ sub hsv2rgb {
 	else {
 		($r, $g, $b) = ( $v, $p, $q);
 	}
-	return ((int($r*255.9)<<16) + (int($g*255.9)<<8) + int($b*255.9)) | 0xff000000;
+	return int($r*255.9), int($g*255.9), int($b*255.9);
 }
 
 1;
