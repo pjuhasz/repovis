@@ -213,7 +213,7 @@ sub do_one_file {
 		# - removed files we mark as invalid, drop from processing
 		my $s = $file_data->{status};
 		if ($s eq 'M') {
-			($success, $coord_list, $extent) = $self->process_file_blame($file, $rev);
+			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
 		}
 		elsif ($s eq 'A') {
 			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
@@ -328,12 +328,12 @@ sub process_modified_file {
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
 
-	$self->{files}{$file}{start_lcnt} = $self->{lcnt};
-
 	my $old_coord_list = $self->{files}{$file}{coords};
 	my $coord_list = [];
 	my $oldc = 0; my $newc = 0;
 	my $old_length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+
+	$self->{files}{$file}{start_lcnt} = $self->{lcnt};
 
 	my $rev_data = $self->{revs_by_node}{$rev};
 	my $user = $rev_data->{user};
