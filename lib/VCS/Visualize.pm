@@ -212,17 +212,23 @@ sub do_one_file {
 		#   but keep the rest of the data
 		# - removed files we mark as invalid, drop from processing
 		my $s = $file_data->{status};
-		if ($s eq 'M') {
+		if ($s eq 'modified') {
 			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
 		}
-		elsif ($s eq 'A') {
+		elsif ($s eq 'added') {
 			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
 		}
-		elsif ($s eq 'C') {
+		elsif ($s eq 'unchanged') {
 			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev);
 		}
-		elsif ($s eq 'R') {
+		elsif ($s eq 'deleted') {
 			return;
+		}
+		elsif ($s eq 'copied') { # TODO
+			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
+		}
+		elsif ($s eq 'renamed') { # TODO
+			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
 		}
 		else {
 			croak "error: unknown status '$s' while processing file $file in rev $rev";
@@ -234,7 +240,7 @@ sub do_one_file {
 		# for our purposes they are simply not present in this revision,
 		# but we want to get full blame output on 
 		# added, modified or unchanged files.
-		return if $file_data->{status} eq 'R';
+		return if $file_data->{status} eq 'deleted';
 
 		print " processing new file $file\n" if $self->{verbose} > 1;
 

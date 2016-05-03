@@ -93,7 +93,7 @@ sub files {
 	my @include = map { ('-I', $_) } @{$self->{include}};
 	my $rev = $args{rev} // $self->{orig_rev};
 	my @command = (
-		qw/hg stat -marc/,
+		qw/hg stat -marcC/,
 		'--change', $rev,
 		@exclude, @include,
 		'--cwd', $self->{root_dir},
@@ -102,11 +102,41 @@ sub files {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 
-	my (@files);
+	# use readable strings instead of single letters to avoid confusion with git
+	# TODO numeric constants?
+	my %mapping = (
+		M => 'modified',
+		A => 'added',
+		R => 'deleted',
+		C => 'unchanged',
+	);
+
+	my (@files, %copied_index);
 	for my $line (@$out) {
-		my ($status, $name) = split / /, $line, 2;
-		push @files, { name => $name, status => $status}; # TODO get earliest rev, split path here?
+		my $status_char = substr($line, 0, 1);
+		my $name        = substr($line, 2);
+
+		# rely on the fact that hg stat returns Added files first,
+		# and with --copies, prints the source file for copied or renamed
+		# files immediately after the "new" file (reported as Added).
+		if ($status_char eq ' ') {
+			$files[-1]{source} = $name;
+			# mark it as copied, but we may have to correct this to renamed
+			# if the same file is found among the removed ones
+			$files[-1]{status} = 'copied';
+			$copied_index{$name} = $#files;
+		}
+		elsif ($status_char eq 'R' and exists $copied_index{$name}) {
+			# again, we rely on Removed files being reported after Added ones
+			# all this awkwardness wouldn't be necessary if hg reported
+			# renamed and copied files in a more sensible way.
+			$files[ $copied_index{$name} ]{status} = 'renamed';
+		}
+		else {
+			push @files, { name => $name, status => $mapping{$status_char} };
+		}
 	}
+
 	@files = sort { $a->{name} cmp $b->{name} } @files;
 	return \@files;
 }
