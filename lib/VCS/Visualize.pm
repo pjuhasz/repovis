@@ -605,14 +605,16 @@ sub print_binary_matrices {
 
 	my $transparent_white = pack 'L>', 0x00ffffff;
 	my $commit_red = pack 'L>', $self->{commit_rgb};
+	my $max_numeric_id = $self->{max_numeric_id};
 
 	for my $y (1..$self->{ys}+1) {
 		my $row = $self->{grid}[$y];
 		for my $x (1..$self->{xs}+1) {
 			if ( exists $row->[$x] ) {
 				my $pt = $row->[$x];
+				my $id = $pt->{i};
 				my $fc = $self->{files}{ $pt->{f} };
-				$outbuffer_f .= ($pt->{i} == $self->{max_numeric_id}) ?
+				$outbuffer_f .= ($id == $max_numeric_id) ?
 					$commit_red :
 					pack 'C4', 0xff, hsv2rgb(
 						$fc->{H},
@@ -622,7 +624,7 @@ sub print_binary_matrices {
 
 				$outbuffer_b .= pack 'C4', 0xff, hsv2rgb(
 					$self->{users}{ $pt->{u} }{H},
-					0.03+0.93*$pt->{i}/($self->{max_numeric_id}||1),
+					0.03+0.93*$id/($max_numeric_id||1),
 					1
 				);
 			}
