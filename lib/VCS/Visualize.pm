@@ -364,7 +364,7 @@ sub process_modified_file {
 
 				$extent->update_xy($x, $y);
 
-				warn "   - ".($lcnt+1). " ".$old_coord_list->[$newc]{n}." ".$old_coord_list->[$newc]{i}."\n";
+				warn "   - ".($lcnt+1). " ".$old_coord_list->[$oldc]{n}." ".$old_coord_list->[$oldc]{i}."\n";
 
 
 				$coord_list->[$newc] = $old_coord_list->[$oldc];
@@ -395,11 +395,11 @@ sub process_modified_file {
 									f => $file,
 									n => $newc,
 								};
+				$newc++;
 				$lcnt++;
 				warn "   + $lcnt --- ".$self->{max_numeric_id}."\n";
 			}
 			$oldc += $s1;
-			$newc += $s2;
 			warn "  after  $oldc $newc $lcnt\n";
 		}
 	}
@@ -410,7 +410,7 @@ sub process_modified_file {
 
 		$extent->update_xy($x, $y);
 
-		warn "   - ".($lcnt+1). " ".$old_coord_list->[$newc]{n}." ".$old_coord_list->[$newc]{i}."\n";
+		warn "   - ".($lcnt+1). " ".$old_coord_list->[$oldc]{n}." ".$old_coord_list->[$oldc]{i}."\n";
 
 		$coord_list->[$newc] = $old_coord_list->[$oldc];
 		$coord_list->[$newc]{X} = $x;
