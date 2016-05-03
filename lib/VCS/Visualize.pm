@@ -330,13 +330,16 @@ sub process_modified_file {
 
 	my $old_coord_list = $self->{files}{$file}{coords};
 	my $coord_list = [];
-	my $oldc = 0; my $newc = 0;
+
 	my $old_length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
 
-	$self->{files}{$file}{start_lcnt} = $self->{lcnt};
+	my $lcnt = $self->{lcnt};
+	$self->{files}{$file}{start_lcnt} = $lcnt;
 
 	my $rev_data = $self->{revs_by_node}{$rev};
 	my $user = $rev_data->{user};
+
+	my $oldc = 0; my $newc = 0;
 
 	warn "xxxxxx $file $old_length ".(scalar @$old_coord_list)."\n";
 	warn "yyyyyy\n" if $old_length != scalar @$old_coord_list;
@@ -346,13 +349,13 @@ sub process_modified_file {
 			$s1 = 1 if $s1 eq '';
 			$s2 = 1 if $s2 eq '';
 			warn "  $l1 $s1 $l2 $s2\n";
-			warn "  before $oldc $newc $self->{lcnt}\n";
+			warn "  before $oldc $newc $lcnt\n";
 			
 			# update the coordinates for the lines before this hunk,
 			# keep revision and user data
 			for my $i ($oldc .. $l1-1) {
-				$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
-				my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
+				$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
+				my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
 
 				$extent->update_xy($x, $y);
 
@@ -364,16 +367,16 @@ sub process_modified_file {
 
 				$newc++;
 				$oldc++;
-				$self->{lcnt}++;
+				$lcnt++;
 			}
 
-			warn "  during $oldc $newc $self->{lcnt}\n";
+			warn "  during $oldc $newc $lcnt\n";
 
 
 			# apply the hunk, drop $s1 lines, add $s2 lines with current rev and user
 			for my $i (1..$s2) {
-				$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
-				my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
+				$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
+				my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
 
 				$extent->update_xy($x, $y);
 
@@ -385,17 +388,17 @@ sub process_modified_file {
 									f => $file,
 									n => $newc,
 								};
-				$self->{lcnt}++;
+				$lcnt++;
 			}
 			$oldc += $s1;
 			$newc += $s2;
-			warn "  after  $oldc $newc $self->{lcnt}\n";
+			warn "  after  $oldc $newc $lcnt\n";
 		}
 	}
 
 	for my $i ($oldc .. $old_length-1) {
-		$self->{cached_n_to_xy}->[$self->{lcnt}] //= [ $self->{curve}->n_to_xy($self->{lcnt}) ];
-		my ($x, $y) = @{ $self->{cached_n_to_xy}->[$self->{lcnt}] };
+		$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
+		my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
 
 		$extent->update_xy($x, $y);
 
@@ -407,12 +410,12 @@ sub process_modified_file {
 
 		$newc++;
 		$oldc++;
-		$self->{lcnt}++;
+		$lcnt++;
 	}
-	warn "  final  $oldc $newc $self->{lcnt}\n";
+	warn "  final  $oldc $newc $lcnt\n";
 
-
-	$self->{files}{$file}{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
+	$self->{lcnt} = $lcnt;
+	$self->{files}{$file}{end_lcnt} = $lcnt; # start_lcnt <= lcnt < end_lcnt
 
 	return (FILE_PROCESSING_SUCCESSFUL, $coord_list, $extent);
 }
