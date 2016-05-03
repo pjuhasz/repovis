@@ -41,13 +41,6 @@ sub current_rev {
 	return join "", @$out;
 }
 
-sub numeric_id {
-	my ($self, %args) = @_;
-	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(
-		qw/hg id -n --cwd/, $self->{root_dir}, '--rev', $args{rev});
-	return join "", @$out;
-}
-
 sub get_all_revs {
 	my ($self) = @_;
 	# \x1f is the ASCII field separator character
