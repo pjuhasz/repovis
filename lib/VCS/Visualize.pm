@@ -341,16 +341,11 @@ sub process_modified_file {
 
 	my $oldc = 0; my $newc = 0;
 
-	warn "xxxxxx $file $old_length ".(scalar @$old_coord_list)."\n";
-	warn "yyyyyy\n" if $old_length != scalar @$old_coord_list;
 	for my $line (@$diff) {
 		if (my ($l1, $s1, $l2, $s2) = ($line =~ /^\@\@ \s - (\d+),?(\d*) \s \+ (\d+),?(\d*) \s \@\@/x)) {
-			warn " $line\n";
 			$s1 = 1 if $s1 eq '';
 			$s2 = 1 if $s2 eq '';
-			warn "  $l1 $s1 $l2 $s2\n";
-			warn "  before $oldc $newc $lcnt\n";
-			
+
 			# Update the coordinates for the lines before this hunk,
 			# keep revision and user data.
 			# According to diff's docs, "an empty hunk is considered to
@@ -364,9 +359,6 @@ sub process_modified_file {
 
 				$extent->update_xy($x, $y);
 
-				warn "   - ".($lcnt+1). " ".$old_coord_list->[$oldc]{n}." ".$old_coord_list->[$oldc]{i}."\n";
-
-
 				$coord_list->[$newc] = $old_coord_list->[$oldc];
 				$coord_list->[$newc]{X} = $x;
 				$coord_list->[$newc]{Y} = $y;
@@ -377,8 +369,6 @@ sub process_modified_file {
 				$oldc++;
 				$lcnt++;
 			}
-			warn "  during $oldc==$l1 $newc==$l2 $lcnt\n";
-
 
 			# apply the hunk, drop $s1 lines, add $s2 lines with current rev and user
 			for my $i (1..$s2) {
@@ -397,10 +387,8 @@ sub process_modified_file {
 								};
 				$newc++;
 				$lcnt++;
-				warn "   + $lcnt --- ".$self->{max_numeric_id}."\n";
 			}
 			$oldc += $s1;
-			warn "  after  $oldc $newc $lcnt\n";
 		}
 	}
 
@@ -409,8 +397,6 @@ sub process_modified_file {
 		my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
 
 		$extent->update_xy($x, $y);
-
-		warn "   - ".($lcnt+1). " ".$old_coord_list->[$oldc]{n}." ".$old_coord_list->[$oldc]{i}."\n";
 
 		$coord_list->[$newc] = $old_coord_list->[$oldc];
 		$coord_list->[$newc]{X} = $x;
@@ -422,7 +408,6 @@ sub process_modified_file {
 		$oldc++;
 		$lcnt++;
 	}
-	warn "  final  $oldc $newc $lcnt\n";
 
 	$self->{lcnt} = $lcnt;
 	$self->{files}{$file}{end_lcnt} = $lcnt; # start_lcnt <= lcnt < end_lcnt
