@@ -119,10 +119,9 @@ sub analyze_one_rev {
 
 	$rev //= $self->{repo}->current_rev();
 
-	$self->{max_numeric_id} = 0+$self->{repo}->numeric_id(rev => $rev);
-
 	my $localrev = $self->{revs_by_node}{$rev}{localrev};
 	print "processing revision $localrev:$rev\n" if $self->{verbose} > 0;
+	$self->{max_numeric_id} = $localrev;
 
 	# check if we have to use a different saved files data
 	# we must use dclone here, because more than one children might depend on this data
@@ -582,8 +581,9 @@ sub to_disk {
 
 	my $old_wd = getcwd();
 	chdir($self->{cache_dir}) or croak "error: can't chdir to cache dir $self->{cache_dir}";
-	
-	my $id = sprintf("%05d", $self->{repo}->numeric_id(rev => $rev));
+
+	my $numeric_id = $self->{revs_by_node}{$rev}{localrev};
+	my $id = sprintf("%05d", $numeric_id);
 
 	$self->print_binary_matrices('file_grid' => $id.'_f.dat', 'blame_grid' => $id.'_b.dat');
 	$self->print_files($id.'_l.dat');
