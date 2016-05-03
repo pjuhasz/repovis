@@ -351,13 +351,21 @@ sub process_modified_file {
 			warn "  $l1 $s1 $l2 $s2\n";
 			warn "  before $oldc $newc $lcnt\n";
 			
-			# update the coordinates for the lines before this hunk,
-			# keep revision and user data
-			for my $i ($oldc .. $l1-1) {
+			# Update the coordinates for the lines before this hunk,
+			# keep revision and user data.
+			# According to diff's docs, "an empty hunk is considered to
+			# start at the line that follows the hunk", so we have to 
+			# special-case $s1 == 0 here.
+			my $from = $oldc;
+			my $to = $l1 - 1 - ($s1 > 0);
+			for my $i ($from .. $to) {
 				$self->{cached_n_to_xy}->[$lcnt] //= [ $self->{curve}->n_to_xy($lcnt) ];
 				my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
 
 				$extent->update_xy($x, $y);
+
+				warn "   - ".($lcnt+1). " ".$old_coord_list->[$newc]{n}." ".$old_coord_list->[$newc]{i}."\n";
+
 
 				$coord_list->[$newc] = $old_coord_list->[$oldc];
 				$coord_list->[$newc]{X} = $x;
@@ -369,8 +377,7 @@ sub process_modified_file {
 				$oldc++;
 				$lcnt++;
 			}
-
-			warn "  during $oldc $newc $lcnt\n";
+			warn "  during $oldc==$l1 $newc==$l2 $lcnt\n";
 
 
 			# apply the hunk, drop $s1 lines, add $s2 lines with current rev and user
@@ -389,6 +396,7 @@ sub process_modified_file {
 									n => $newc,
 								};
 				$lcnt++;
+				warn "   + $lcnt --- ".$self->{max_numeric_id}."\n";
 			}
 			$oldc += $s1;
 			$newc += $s2;
@@ -401,6 +409,8 @@ sub process_modified_file {
 		my ($x, $y) = @{ $self->{cached_n_to_xy}->[$lcnt] };
 
 		$extent->update_xy($x, $y);
+
+		warn "   - ".($lcnt+1). " ".$old_coord_list->[$newc]{n}." ".$old_coord_list->[$newc]{i}."\n";
 
 		$coord_list->[$newc] = $old_coord_list->[$oldc];
 		$coord_list->[$newc]{X} = $x;
