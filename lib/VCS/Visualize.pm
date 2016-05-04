@@ -226,10 +226,10 @@ sub do_one_file {
 		elsif ($s eq 'copied') { # TODO mark file label somehow
 			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
 		}
-		elsif ($s eq 'renamed') { # TODO mark file label somehow, don't change file color?
+		elsif ($s eq 'renamed') { # TODO mark file label somehow
 			$self->{files}{$file} = $self->{files}{ $file_data->{source} };
 			delete $self->{files}{ $file_data->{source} };
-			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev);
+			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev, renamed => 1);
 		}
 		else {
 			croak "error: unknown status '$s' while processing file $file in rev $rev";
@@ -424,7 +424,7 @@ sub process_modified_file {
 }
 
 sub process_unchanged_file {
-	my ($self, $file, $rev) = @_;
+	my ($self, $file, $rev, %args) = @_;
 
 	return (FILE_PROCESSING_FAILED, undef, undef) if $self->{files}{$file}{binary};
 	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
@@ -441,7 +441,9 @@ sub process_unchanged_file {
 	# so we don't have to recalculate coordinates for this file either,
 	# we can happily bail out. We return a special flag so that the 
 	# coords, extent, center etc. data don't have to be recalculated.
-	if ($self->{files}{$file}{start_lcnt} == $start) {
+	# However, we do recalculate in case of moved/renamed files 
+	# (TODO perhaps not necessary if the file was moved within the same dir?)
+	if ($self->{files}{$file}{start_lcnt} == $start and not $args{renamed}) {
 		return (FILE_PROCESSING_UNCHANGED, $coord_list, $self->{files}{$file}{extent});
 	}
 
@@ -456,6 +458,7 @@ sub process_unchanged_file {
 			my $i = $lcnt - $start;
 			$coord_list->[$i]{X} = $x;
 			$coord_list->[$i]{Y} = $y;
+			$coord_list->[$i]{f} = $file if $args{renamed};
 			# keep the rest
 	}
 
