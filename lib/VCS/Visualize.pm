@@ -223,11 +223,13 @@ sub do_one_file {
 		elsif ($s eq 'deleted') {
 			return;
 		}
-		elsif ($s eq 'copied') { # TODO
+		elsif ($s eq 'copied') { # TODO mark file label somehow
 			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
 		}
-		elsif ($s eq 'renamed') { # TODO
-			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
+		elsif ($s eq 'renamed') { # TODO mark file label somehow, don't change file color?
+			$self->{files}{$file} = $self->{files}{ $file_data->{source} };
+			delete $self->{files}{ $file_data->{source} };
+			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev);
 		}
 		else {
 			croak "error: unknown status '$s' while processing file $file in rev $rev";
