@@ -813,39 +813,39 @@ sub copy_static_files {
 
 sub hsv2rgb {
 	my ( $h, $s, $v ) = @_;
-	my ($r, $g, $b);
 
 	if ( $s == 0 ) {
-		$r = int($v*255.9);
+		my $r = int($v*255.9);
 		return ($r, $r, $r);
 	}
 
 	$h = ($h % 360) / 60;
-	my $i = floor( $h );
+	my $i = int($h);
 	my $f = $h - $i;
-	my $p = $v * ( 1 - $s );
-	my $q = $v * ( 1 - $s * $f );
-	my $t = $v * ( 1 - $s * ( 1 - $f ) );
+	$v *= 255.9;
+	my $p = int( $v * ( 1 - $s ) );
+	my $q = int( $v * ( 1 - $s * $f ) );
+	my $t = int( $v * ( 1 - $s * ( 1 - $f ) ) );
+	$v = int( $v );
 
 	if ( $i == 0 ) {
-		($r, $g, $b) = ( $v, $t, $p);
+		return ($v, $t, $p);
 	}
 	elsif ( $i == 1 ) {
-		($r, $g, $b) = ( $q, $v, $p);
+		return ($q, $v, $p);
 	}
 	elsif ( $i == 2 ) {
-		($r, $g, $b) = ( $p, $v, $t);
+		return ($p, $v, $t);
 	}
 	elsif ( $i == 3 ) {
-		($r, $g, $b) = ( $p, $q, $v);
+		return ($p, $q, $v);
 	}
 	elsif ( $i == 4 ) {
-		($r, $g, $b) = ( $t, $p, $v);
+		return ($t, $p, $v);
 	}
 	else {
-		($r, $g, $b) = ( $v, $p, $q);
+		return ($v, $p, $q);
 	}
-	return int($r*255.9), int($g*255.9), int($b*255.9);
 }
 
 1;
