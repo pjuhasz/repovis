@@ -321,7 +321,7 @@ sub process_modified_file {
 	if (@$diff == 0) {
 		return $self->process_unchanged_file($file, $rev); # empty diff means no change
 	}
-	elsif ($diff->[1] =~ /binary file/i) {
+	elsif ($diff->[1] =~ /binary file/i or $diff->[2] =~ /binary/i) {
 		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
