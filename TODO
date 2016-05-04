@@ -17,6 +17,8 @@
 #      $self->{revs}{saved_files}, and mark this rev as need_to_save_files, and mark the child revs as need_to_use_saved_files
 #      the marked child revs need to copy the saved files struct from the cache to the current files struct
 # ---- merges, renamed/moved files?
+# ---- flash label red if moved/renamed/copied
+# ---- different commit colors for merges?
 # ++ interactive mode that just launches the gnuplot with the cached data (default when ran without parameters)
 # --- more info in title/on graph: rev/node, desc, author, parent/children nodes (indicate if merge/fork), branch, legend
 # --- better, fine-grained control to walk graph, by default jump to first parent/children
@@ -36,5 +38,6 @@
 # + cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
 # ++ or just simply return an aref of lines
 # + refactor all those max_x etc. calculations into an extent class or something
+# - refactor coords struct to use array instead of hash? worse readability, but less memory and a bit faster
 # - git, svn? support
 # ? js+html output? (yuck)
