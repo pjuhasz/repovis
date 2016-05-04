@@ -224,7 +224,8 @@ sub do_one_file {
 			return;
 		}
 		elsif ($s eq 'copied') { # TODO mark file label somehow
-			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
+			$self->{files}{$file} = dclone $self->{files}{ $file_data->{source} };
+			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev, renamed => 1);
 		}
 		elsif ($s eq 'renamed') { # TODO mark file label somehow
 			$self->{files}{$file} = $self->{files}{ $file_data->{source} };
