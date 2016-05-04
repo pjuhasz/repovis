@@ -37,7 +37,7 @@ sub new {
 sub current_rev {
 	my ($self) = @_;
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(
-		qw/hg log --cwd/, $self->{root_dir}, qw/--follow -l 1 --template {node}/);
+		qw/hg log --cwd/, $self->{root_dir}, qw/--follow -l 1 --template {node|short}/);
 	return join "", @$out;
 }
 
