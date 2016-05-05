@@ -38,6 +38,6 @@
 # + cmdserver for hg (should be as fast or faster than a single blame -unf on all files)
 # ++ or just simply return an aref of lines
 # + refactor all those max_x etc. calculations into an extent class or something
-# - refactor coords struct to use array instead of hash? worse readability, but less memory and a bit faster
+# + refactor coords struct to use array instead of hash? worse readability, but less memory and a bit faster
 # - git, svn? support
 # ? js+html output? (yuck)
