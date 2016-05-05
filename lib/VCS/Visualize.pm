@@ -269,7 +269,7 @@ sub do_one_file {
 	}
 
 	# save data
-	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+	my $length = $self->{files}{$file}{length};
 	$xmean /= $length;
 	$ymean /= $length;
 	$self->{files}{$file}{coords} = $coord_list;
@@ -321,6 +321,7 @@ sub process_file_blame {
 	}
 
 	$file_record->{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{length} = $file_record->{end_lcnt} - $file_record->{start_lcnt};
 
 	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
 }
@@ -434,6 +435,8 @@ sub process_modified_file {
 
 	$self->{lcnt} = $lcnt;
 	$file_record->{end_lcnt} = $lcnt; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{length} = $file_record->{end_lcnt} - $file_record->{start_lcnt};
+
 
 	return (FILE_PROCESSING_SUCCESSFUL, $coord_list, $extent);
 }
@@ -480,6 +483,7 @@ sub process_unchanged_file {
 
 	$file_record->{start_lcnt} = $start;
 	$file_record->{end_lcnt}   = $end; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{length} = $end - $start;
 
 	return (FILE_PROCESSING_SUCCESSFUL, $coord_list, $extent);
 }
@@ -540,6 +544,7 @@ sub process_added_file {
 
 	$file_record->{start_lcnt} = $start;
 	$file_record->{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{length} = $end - $start;
 
 	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
 }
@@ -649,7 +654,7 @@ sub print_binary_matrices {
 					pack 'C4', 0xff, hsv2rgb(
 						$fc->{H},
 						$fc->{S},
-						$fc->{V} - 0.25*($pt->[PT_N]/($fc->{end_lcnt}-$fc->{start_lcnt}))
+						$fc->{V} - 0.25*($pt->[PT_N]/$fc->{length})
 					);
 
 				$outbuffer_b .= pack 'C4', 0xff, hsv2rgb(
