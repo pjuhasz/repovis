@@ -272,18 +272,19 @@ sub do_one_file {
 sub process_file_blame {
 	my ($self, $file, $rev) = @_;
 
+	my $file_record = $self->{files}{$file};
 	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
 	if (@$blame == 0) {
 		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
 	}
 	elsif ($blame->[0] =~ /binary file/) {
-		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
+		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
 	else {
 		# not binary (anymore? the old binary file might have been
 		# replaced by a text file of the same name), clear the taint
-		$self->{files}{$file}{binary} = 0;
+		$file_record->{binary} = 0;
 	}
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
@@ -302,16 +303,16 @@ sub process_file_blame {
 								X => $x,
 								Y => $y,
 								i => $id,
-								u => $user,
-								f => $file,
-								n => $self->{lcnt} - $self->{files}{$file}{start_lcnt},
+								u => $self->{users}{$user},
+								f => $file_record,
+								n => $self->{lcnt} - $file_record->{start_lcnt},
 							};
 
 			$self->{lcnt}++;
 		}
 	}
 
-	$self->{files}{$file}{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{end_lcnt} = $self->{lcnt}; # start_lcnt <= lcnt < end_lcnt
 
 	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
 }
@@ -320,33 +321,35 @@ sub process_file_blame {
 sub process_modified_file {
 	my ($self, $file, $rev, %args) = @_;
 
+	my $file_record = $self->{files}{$file};
 	my $diff = $self->{repo}->diff(file => $file, rev => $rev);
 	# TODO process diff header and check these in the repo-specific modules
 	if (@$diff == 0) {
 		return $self->process_unchanged_file($file, $rev); # empty diff means no change
 	}
 	elsif ($diff->[1] =~ /binary file/i or $diff->[2] =~ /binary/i) {
-		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
+		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
 	else {
 		# not binary (anymore? the old binary file might have been
 		# replaced by a text file of the same name), clear the taint
-		$self->{files}{$file}{binary} = 0;
+		$file_record->{binary} = 0;
 	}
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
 
-	my $old_coord_list = $self->{files}{$file}{coords};
+	my $old_coord_list = $file_record->{coords};
 	my $coord_list = [];
 
-	my $old_length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+	my $old_length = $file_record->{end_lcnt} - $file_record->{start_lcnt};
 
 	my $lcnt = $self->{lcnt};
-	$self->{files}{$file}{start_lcnt} = $lcnt;
+	$file_record->{start_lcnt} = $lcnt;
 
 	my $rev_data = $self->{revs_by_node}{$rev};
 	my $user = $rev_data->{user};
+	my $user_record = $self->{users}{$user};
 
 	my $oldc = 0; my $newc = 0;
 
@@ -372,7 +375,7 @@ sub process_modified_file {
 				$coord_list->[$newc]{X} = $x;
 				$coord_list->[$newc]{Y} = $y;
 				$coord_list->[$newc]{n} = $newc;
-				$coord_list->[$newc]{f} = $file if $args{renamed};
+				$coord_list->[$newc]{f} = $file_record if $args{renamed};
 				# keep the rest
 
 				$newc++;
@@ -391,8 +394,8 @@ sub process_modified_file {
 									X => $x,
 									Y => $y,
 									i => $self->{max_numeric_id},
-									u => $user,
-									f => $file,
+									u => $user_record,
+									f => $file_record,
 									n => $newc,
 								};
 				$newc++;
@@ -412,7 +415,7 @@ sub process_modified_file {
 		$coord_list->[$newc]{X} = $x;
 		$coord_list->[$newc]{Y} = $y;
 		$coord_list->[$newc]{n} = $newc;
-		$coord_list->[$newc]{f} = $file if $args{renamed};
+		$coord_list->[$newc]{f} = $file_record if $args{renamed};
 
 		# keep the rest
 
@@ -422,7 +425,7 @@ sub process_modified_file {
 	}
 
 	$self->{lcnt} = $lcnt;
-	$self->{files}{$file}{end_lcnt} = $lcnt; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{end_lcnt} = $lcnt; # start_lcnt <= lcnt < end_lcnt
 
 	return (FILE_PROCESSING_SUCCESSFUL, $coord_list, $extent);
 }
@@ -430,11 +433,12 @@ sub process_modified_file {
 sub process_unchanged_file {
 	my ($self, $file, $rev, %args) = @_;
 
-	return (FILE_PROCESSING_FAILED, undef, undef) if $self->{files}{$file}{binary};
-	my $length = $self->{files}{$file}{end_lcnt} - $self->{files}{$file}{start_lcnt};
+	my $file_record = $self->{files}{$file};
+	return (FILE_PROCESSING_FAILED, undef, undef) if $file_record->{binary};
+	my $length = $file_record->{end_lcnt} - $file_record->{start_lcnt};
 	return (FILE_PROCESSING_FAILED, undef, undef) if $length == 0;
 
-	my $coord_list = $self->{files}{$file}{coords};
+	my $coord_list = $file_record->{coords};
 
 	my $start = $self->{lcnt};
 	$self->{lcnt} += $length;
@@ -447,8 +451,8 @@ sub process_unchanged_file {
 	# coords, extent, center etc. data don't have to be recalculated.
 	# However, we do recalculate in case of moved/renamed files 
 	# (TODO perhaps not necessary if the file was moved within the same dir?)
-	if ($self->{files}{$file}{start_lcnt} == $start and not $args{renamed}) {
-		return (FILE_PROCESSING_UNCHANGED, $coord_list, $self->{files}{$file}{extent});
+	if ($file_record->{start_lcnt} == $start and not $args{renamed}) {
+		return (FILE_PROCESSING_UNCHANGED, $coord_list, $file_record->{extent});
 	}
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
@@ -462,12 +466,12 @@ sub process_unchanged_file {
 			my $i = $lcnt - $start;
 			$coord_list->[$i]{X} = $x;
 			$coord_list->[$i]{Y} = $y;
-			$coord_list->[$i]{f} = $file if $args{renamed};
+			$coord_list->[$i]{f} = $file_record if $args{renamed};
 			# keep the rest
 	}
 
-	$self->{files}{$file}{start_lcnt} = $start;
-	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{start_lcnt} = $start;
+	$file_record->{end_lcnt}   = $end; # start_lcnt <= lcnt < end_lcnt
 
 	return (FILE_PROCESSING_SUCCESSFUL, $coord_list, $extent);
 }
@@ -475,16 +479,17 @@ sub process_unchanged_file {
 sub process_added_file {
 	my ($self, $file, $rev) = @_;
 
+	my $file_record = $self->{files}{$file};
 	my $line_count = $self->{repo}->line_count(rev => $rev, file => $file);
 	if ($line_count == 0) {
 		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
 	}
 	elsif ($line_count == -1) {
-		$self->{files}{$file}{binary} = 1; # skip it, but mark as binary for future use
+		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
 	else {
-		$self->{files}{$file}{binary} = 0;
+		$file_record->{binary} = 0;
 	}
 	
 	return (FILE_PROCESSING_FAILED, undef, undef) if $line_count == 0;
@@ -493,14 +498,15 @@ sub process_added_file {
 	my $user = $rev_data->{user};
 
 	# work around merges?
-	if (exists $self->{files}{$file} and exists $self->{files}{$file}{coords}) {
-		my $olduser = $self->{files}{$file}{coords}[0]{u};
+	if (defined $file_record and exists $file_record->{coords}) {
+		my $olduser = $file_record->{coords}[0]{u};
 		if (defined $olduser and $olduser ne $user) {
 			carp "file $file preserving old author $olduser over $user\n" if $self->{verbose} > 1;
 			$user = $olduser;
 		}
 	}
 
+	my $user_record = $self->{users}{$user};
 	my $extent = VCS::Visualize::BoundingRectangle->new;
 
 	my $start = $self->{lcnt};
@@ -518,14 +524,14 @@ sub process_added_file {
 								X => $x,
 								Y => $y,
 								i => $self->{max_numeric_id},
-								u => $user,
-								f => $file,
+								u => $user_record,
+								f => $file_record,
 								n => $lcnt - $start,
 							};
 	}
 
-	$self->{files}{$file}{start_lcnt} = $start;
-	$self->{files}{$file}{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{start_lcnt} = $start;
+	$file_record->{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
 
 	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
 }
@@ -551,11 +557,11 @@ sub trace_borders {
 	my @border;
 	for my $y (0..($self->{ys}+1)) {
 		for my $x (0..($self->{xs}+1)) {
-			my $v = exists $self->{grid}[$y  ][$x  ] ? $self->{grid}[$y  ][$x  ]{f} : '';
-			my $r = exists $self->{grid}[$y  ][$x+1] ? $self->{grid}[$y  ][$x+1]{f} : '';
-			my $d = exists $self->{grid}[$y+1][$x  ] ? $self->{grid}[$y+1][$x  ]{f} : '';
-			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v ne $r);
-			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v ne $d);
+			my $v = exists $self->{grid}[$y  ][$x  ] ? $self->{grid}[$y  ][$x  ]{f} : 0;
+			my $r = exists $self->{grid}[$y  ][$x+1] ? $self->{grid}[$y  ][$x+1]{f} : 0;
+			my $d = exists $self->{grid}[$y+1][$x  ] ? $self->{grid}[$y+1][$x  ]{f} : 0;
+			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v != $r);
+			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v != $d);
 		}
 	}
 
@@ -620,14 +626,16 @@ sub print_binary_matrices {
 	my $transparent_white = pack 'L>', 0x00ffffff;
 	my $commit_red = pack 'L>', $self->{commit_rgb};
 	my $max_numeric_id = $self->{max_numeric_id};
+	my @yrange = (1..$self->{ys}+1);
+	my @xrange = (1..$self->{xs}+1);
 
-	for my $y (1..$self->{ys}+1) {
+	for my $y (@yrange) {
 		my $row = $self->{grid}[$y];
-		for my $x (1..$self->{xs}+1) {
+		for my $x (@xrange) {
 			if ( exists $row->[$x] ) {
 				my $pt = $row->[$x];
 				my $id = $pt->{i};
-				my $fc = $self->{files}{ $pt->{f} };
+				my $fc = $pt->{f};
 				$outbuffer_f .= ($id == $max_numeric_id) ?
 					$commit_red :
 					pack 'C4', 0xff, hsv2rgb(
@@ -637,7 +645,7 @@ sub print_binary_matrices {
 					);
 
 				$outbuffer_b .= pack 'C4', 0xff, hsv2rgb(
-					$self->{users}{ $pt->{u} }{H},
+					$pt->{u}{H},
 					0.03+0.93*$id/($max_numeric_id||1),
 					1
 				);
