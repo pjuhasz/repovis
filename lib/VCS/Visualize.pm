@@ -510,8 +510,9 @@ sub process_added_file {
 	my $user = $rev_data->{user};
 
 	# work around merges?
+	# FIXME what if they added an unrelated file with the same name to a different branch?
 	if (defined $file_record and exists $file_record->{coords}) {
-		my $olduser = $file_record->{coords}[0][PT_USER];
+		my $olduser = $file_record->{coords}[0][PT_USER]->{user};
 		if (defined $olduser and $olduser ne $user) {
 			carp "file $file preserving old author $olduser over $user\n" if $self->{verbose} > 1;
 			$user = $olduser;
@@ -716,8 +717,9 @@ sub get_and_save_full_log {
 	for my $this (@$revs) {
 		# collect users who ever touched the repo
 		$self->{users}{$this->{user}} //= {
-			n => scalar keys %{$self->{users}},
+			n             => scalar keys %{$self->{users}},
 			user_longname => $this->{user_longname},
+			user          => $this->{user},
 		};
 		
 		# calculate which nodes this node is a child of
