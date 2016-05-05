@@ -225,12 +225,12 @@ sub do_one_file {
 		}
 		elsif ($s eq 'copied') { # TODO mark file label somehow
 			$self->{files}{$file} = dclone $self->{files}{ $file_data->{source} };
-			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev, renamed => 1);
+			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev, renamed => 1);
 		}
 		elsif ($s eq 'renamed') { # TODO mark file label somehow
 			$self->{files}{$file} = $self->{files}{ $file_data->{source} };
 			delete $self->{files}{ $file_data->{source} };
-			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev, renamed => 1);
+			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev, renamed => 1);
 		}
 		else {
 			croak "error: unknown status '$s' while processing file $file in rev $rev";
