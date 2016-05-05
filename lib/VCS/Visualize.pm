@@ -323,11 +323,11 @@ sub process_modified_file {
 
 	my $file_record = $self->{files}{$file};
 	my $diff = $self->{repo}->diff(file => $file, rev => $rev);
-	# TODO process diff header and check these in the repo-specific modules
+
 	if (@$diff == 0) {
 		return $self->process_unchanged_file($file, $rev); # empty diff means no change
 	}
-	elsif ($diff->[1] =~ /binary file/i or $diff->[2] =~ /binary/i) {
+	elsif ($diff->[0] =~ /binary/) {
 		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}

@@ -190,6 +190,17 @@ sub diff {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	warn $err if $err;
+
+	# mangle output: throw away header lines up to the first @@ block,
+	# but try to find rename and binary indications and return those first
+	my %flags;
+	while ($out->[0] and substr($out->[0], 0, 1) ne '@') {
+		my $line = shift @$out;
+		$flags{binary}  = 1 && last if $line =~ /binary/i;
+		$flags{renamed} = 1         if $line =~ /rename/i;
+		$flags{copied}  = 1         if $line =~ /copied/i;
+	}
+	unshift @$out, join ',', keys %flags if %flags;
 	return $out;
 }
 
