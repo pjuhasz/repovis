@@ -54,7 +54,7 @@ sub get_all_revs {
 	my @command = (
 		qw/hg log/,
 		'--cwd', $self->{root_dir}, 
-		qw/--follow --template/, $template,
+		'--template', $template,
 	);
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
