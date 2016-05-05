@@ -182,7 +182,7 @@ sub diff {
 	my ($self, %args) = @_;
 	my $rev = $args{rev} // $self->{orig_rev};
 	my @command = (
-		qw/hg diff -U 0/,
+		qw/hg diff --git -U 0/,
 		'--cwd', $self->{root_dir},
 		'--change', $rev,
 		$args{file}
