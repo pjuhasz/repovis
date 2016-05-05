@@ -18,9 +18,17 @@ use Storable qw/dclone/;
 use VCS::Visualize::Repo;
 use VCS::Visualize::BoundingRectangle;
 
-use constant FILE_PROCESSING_FAILED => 0;
-use constant FILE_PROCESSING_SUCCESSFUL => 1;
-use constant FILE_PROCESSING_UNCHANGED => 2;
+use constant {
+	FILE_PROCESSING_FAILED     => 0,
+	FILE_PROCESSING_SUCCESSFUL => 1,
+	FILE_PROCESSING_UNCHANGED  => 2,
+	PT_X    => 0,
+	PT_Y    => 1,
+	PT_REV  => 2,
+	PT_USER => 3,
+	PT_FILE => 4,
+	PT_N    => 5,
+};
 
 our $VERSION = '0.01';
 
@@ -256,8 +264,8 @@ sub do_one_file {
 	# calculate center of the region occupied by this file, for the name label
 	my ($xmean, $ymean) = (0, 0);
 	for my $pt (@$coord_list) {
-		$xmean += $pt->{X};
-		$ymean += $pt->{Y};
+		$xmean += $pt->[PT_X];
+		$ymean += $pt->[PT_Y];
 	}
 
 	# save data
@@ -372,10 +380,10 @@ sub process_modified_file {
 				$extent->update_xy($x, $y);
 
 				$coord_list->[$newc] = $old_coord_list->[$oldc];
-				$coord_list->[$newc]{X} = $x;
-				$coord_list->[$newc]{Y} = $y;
-				$coord_list->[$newc]{n} = $newc;
-				$coord_list->[$newc]{f} = $file_record if $args{renamed};
+				$coord_list->[$newc][PT_X] = $x;
+				$coord_list->[$newc][PT_Y] = $y;
+				$coord_list->[$newc][PT_N] = $newc;
+				$coord_list->[$newc][PT_FILE] = $file_record if $args{renamed};
 				# keep the rest
 
 				$newc++;
@@ -390,14 +398,14 @@ sub process_modified_file {
 
 				$extent->update_xy($x, $y);
 
-				push @$coord_list, {
-									X => $x,
-									Y => $y,
-									i => $self->{max_numeric_id},
-									u => $user_record,
-									f => $file_record,
-									n => $newc,
-								};
+				push @$coord_list, [
+									$x,
+									$y,
+									$self->{max_numeric_id},
+									$user_record,
+									$file_record,
+									$newc,
+								];
 				$newc++;
 				$lcnt++;
 			}
@@ -412,10 +420,10 @@ sub process_modified_file {
 		$extent->update_xy($x, $y);
 
 		$coord_list->[$newc] = $old_coord_list->[$oldc];
-		$coord_list->[$newc]{X} = $x;
-		$coord_list->[$newc]{Y} = $y;
-		$coord_list->[$newc]{n} = $newc;
-		$coord_list->[$newc]{f} = $file_record if $args{renamed};
+		$coord_list->[$newc][PT_X] = $x;
+		$coord_list->[$newc][PT_Y] = $y;
+		$coord_list->[$newc][PT_N] = $newc;
+		$coord_list->[$newc][PT_FILE] = $file_record if $args{renamed};
 
 		# keep the rest
 
@@ -464,9 +472,9 @@ sub process_unchanged_file {
 			$extent->update_xy($x, $y);
 
 			my $i = $lcnt - $start;
-			$coord_list->[$i]{X} = $x;
-			$coord_list->[$i]{Y} = $y;
-			$coord_list->[$i]{f} = $file_record if $args{renamed};
+			$coord_list->[$i][PT_X] = $x;
+			$coord_list->[$i][PT_Y] = $y;
+			$coord_list->[$i][PT_FILE] = $file_record if $args{renamed};
 			# keep the rest
 	}
 
@@ -499,7 +507,7 @@ sub process_added_file {
 
 	# work around merges?
 	if (defined $file_record and exists $file_record->{coords}) {
-		my $olduser = $file_record->{coords}[0]{u};
+		my $olduser = $file_record->{coords}[0][PT_USER];
 		if (defined $olduser and $olduser ne $user) {
 			carp "file $file preserving old author $olduser over $user\n" if $self->{verbose} > 1;
 			$user = $olduser;
@@ -520,14 +528,14 @@ sub process_added_file {
 
 			$extent->update_xy($x, $y);
 
-			push @coord_list, {
-								X => $x,
-								Y => $y,
-								i => $self->{max_numeric_id},
-								u => $user_record,
-								f => $file_record,
-								n => $lcnt - $start,
-							};
+			push @coord_list, [
+								$x,
+								$y,
+								$self->{max_numeric_id},
+								$user_record,
+								$file_record,
+								$lcnt - $start,
+							];
 	}
 
 	$file_record->{start_lcnt} = $start;
@@ -544,8 +552,8 @@ sub grids_from_coords {
 	for my $file (keys %{$self->{files}}) {
 		next if $self->{files}{$file}{status} == 0;
 		for my $pt (@{$self->{files}{$file}{coords}}) {
-			my $x = $pt->{X};
-			my $y = $pt->{Y};
+			my $x = $pt->[PT_X];
+			my $y = $pt->[PT_Y];
 			$self->{grid}[ $y - $min_y + 1 ][ $x - $min_x + 1 ] = $pt;
 		}
 	}
@@ -557,9 +565,9 @@ sub trace_borders {
 	my @border;
 	for my $y (0..($self->{ys}+1)) {
 		for my $x (0..($self->{xs}+1)) {
-			my $v = exists $self->{grid}[$y  ][$x  ] ? $self->{grid}[$y  ][$x  ]{f} : 0;
-			my $r = exists $self->{grid}[$y  ][$x+1] ? $self->{grid}[$y  ][$x+1]{f} : 0;
-			my $d = exists $self->{grid}[$y+1][$x  ] ? $self->{grid}[$y+1][$x  ]{f} : 0;
+			my $v = exists $self->{grid}[$y  ][$x  ] ? $self->{grid}[$y  ][$x  ][PT_FILE] : 0;
+			my $r = exists $self->{grid}[$y  ][$x+1] ? $self->{grid}[$y  ][$x+1][PT_FILE] : 0;
+			my $d = exists $self->{grid}[$y+1][$x  ] ? $self->{grid}[$y+1][$x  ][PT_FILE] : 0;
 			push @border, [$x-0.5, $y-1.5, 0, 1]  if ($v != $r);
 			push @border, [$x-1.5, $y-0.5, 1, 0]  if ($v != $d);
 		}
@@ -634,18 +642,18 @@ sub print_binary_matrices {
 		for my $x (@xrange) {
 			if ( exists $row->[$x] ) {
 				my $pt = $row->[$x];
-				my $id = $pt->{i};
-				my $fc = $pt->{f};
+				my $id = $pt->[PT_REV];
+				my $fc = $pt->[PT_FILE];
 				$outbuffer_f .= ($id == $max_numeric_id) ?
 					$commit_red :
 					pack 'C4', 0xff, hsv2rgb(
 						$fc->{H},
 						$fc->{S},
-						$fc->{V} - 0.25*($pt->{n}/($fc->{end_lcnt}-$fc->{start_lcnt}))
+						$fc->{V} - 0.25*($pt->[PT_N]/($fc->{end_lcnt}-$fc->{start_lcnt}))
 					);
 
 				$outbuffer_b .= pack 'C4', 0xff, hsv2rgb(
-					$pt->{u}{H},
+					$pt->[PT_USER]{H},
 					0.03+0.93*$id/($max_numeric_id||1),
 					1
 				);
