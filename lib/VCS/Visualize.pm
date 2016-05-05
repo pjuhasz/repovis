@@ -318,7 +318,7 @@ sub process_file_blame {
 
 # TODO write this DRYer
 sub process_modified_file {
-	my ($self, $file, $rev) = @_;
+	my ($self, $file, $rev, %args) = @_;
 
 	my $diff = $self->{repo}->diff(file => $file, rev => $rev);
 	# TODO process diff header and check these in the repo-specific modules
@@ -372,6 +372,7 @@ sub process_modified_file {
 				$coord_list->[$newc]{X} = $x;
 				$coord_list->[$newc]{Y} = $y;
 				$coord_list->[$newc]{n} = $newc;
+				$coord_list->[$newc]{f} = $file if $args{renamed};
 				# keep the rest
 
 				$newc++;
@@ -411,6 +412,8 @@ sub process_modified_file {
 		$coord_list->[$newc]{X} = $x;
 		$coord_list->[$newc]{Y} = $y;
 		$coord_list->[$newc]{n} = $newc;
+		$coord_list->[$newc]{f} = $file if $args{renamed};
+
 		# keep the rest
 
 		$newc++;
