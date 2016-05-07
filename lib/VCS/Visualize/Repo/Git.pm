@@ -11,7 +11,7 @@ use Carp;
 
 sub find_root {
 	my ($dir) = @_;
-	my $root_dir = qx|git -C "$dir" parse-rev --show-toplevel 2> /dev/null|;
+	my $root_dir = qx|git -C "$dir" rev-parse --show-toplevel 2> /dev/null|;
 	chomp $root_dir;
 	return $root_dir;
 }
