@@ -493,18 +493,13 @@ sub process_added_file {
 
 	my $file_record = $self->{files}{$file};
 	my $line_count = $self->{repo}->line_count(rev => $rev, file => $file);
-	if ($line_count == 0) {
-		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
-	}
-	elsif ($line_count == -1) {
+	if ($line_count == -1) {
 		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
 	else {
 		$file_record->{binary} = 0;
 	}
-	
-	return (FILE_PROCESSING_FAILED, undef, undef) if $line_count == 0;
 
 	my $rev_data = $self->{revs_by_node}{$rev};
 	my $user = $rev_data->{user};
@@ -519,12 +514,18 @@ sub process_added_file {
 		}
 	}
 
-	my $user_record = $self->{users}{$user};
-	my $extent = VCS::Visualize::BoundingRectangle->new;
-
 	my $start = $self->{lcnt};
 	$self->{lcnt} += $line_count;
 	my $end = $self->{lcnt};
+
+	$file_record->{start_lcnt} = $start;
+	$file_record->{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
+	$file_record->{length} = $line_count;
+
+	return (FILE_PROCESSING_FAILED, undef, undef) if $line_count == 0;
+
+	my $user_record = $self->{users}{$user};
+	my $extent = VCS::Visualize::BoundingRectangle->new;
 
 	my @coord_list;
 	for my $lcnt ($start..$end-1) {
@@ -542,10 +543,6 @@ sub process_added_file {
 								$lcnt - $start,
 							];
 	}
-
-	$file_record->{start_lcnt} = $start;
-	$file_record->{end_lcnt} = $end; # start_lcnt <= lcnt < end_lcnt
-	$file_record->{length} = $end - $start;
 
 	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
 }
