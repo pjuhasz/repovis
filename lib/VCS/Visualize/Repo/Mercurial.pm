@@ -196,9 +196,10 @@ sub diff {
 	my %flags;
 	while ($out->[0] and substr($out->[0], 0, 1) ne '@') {
 		my $line = shift @$out;
-		$flags{binary}  = 1 && last if $line =~ /binary/i;
-		$flags{renamed} = 1         if $line =~ /rename/i;
-		$flags{copied}  = 1         if $line =~ /copied/i;
+		$flags{binary}  = 1 if $line =~ /binary/i;
+		$flags{renamed} = 1 if $line =~ /rename/i;
+		$flags{copied}  = 1 if $line =~ /copied/i;
+		last if $flags{binary};
 	}
 	unshift @$out, join ',', keys %flags if %flags;
 	return $out;
