@@ -149,7 +149,9 @@ sub analyze_one_rev {
 			$self->{cloned_files}--;
 		}
 		$parent->{saved_data_refcount} --;
-		say " $localrev: using saved data from $parent->{localrev}, whose refcount is $parent->{saved_data_refcount}, total cloned files $self->{cloned_files}";
+		say "   $localrev: using saved data from $parent->{localrev}, whose refcount is ".
+			"$parent->{saved_data_refcount}, total cloned files $self->{cloned_files}"
+			if $self->{verbose} > 2;
 	}
 
 	# keep previously collected file data, but mark them invalid
@@ -188,7 +190,9 @@ sub analyze_one_rev {
 	if ($self->{relative_anal} and $self->{revs_by_node}{$rev}{saved_data_refcount}) {
 		$self->{revs_by_node}{$rev}{saved_files} = dclone $self->{files};
 		$self->{cloned_files}++;
-		say " $localrev: saving data, refcount is $self->{revs_by_node}{$rev}{saved_data_refcount}, total cloned files $self->{cloned_files}";
+		say " $localrev: saving data, refcount is $self->{revs_by_node}{$rev}{saved_data_refcount},".
+			" total cloned files $self->{cloned_files}"
+			if $self->{verbose} > 2;
 	}
 }
 
