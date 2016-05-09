@@ -762,7 +762,7 @@ sub get_and_save_full_log {
 		# FIXME is this true in git?
 		if ($parent->{node} ne $prev->{node}) {
 			$this->{saved_data_source_rev} = $parent->{node};
-			$parent->{saved_data_refcount} = scalar @{$parent->{children}};
+			$parent->{saved_data_refcount} ++;
 		}
 		else {
 			$this->{saved_data_source_rev} = undef;
