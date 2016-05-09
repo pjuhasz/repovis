@@ -131,11 +131,25 @@ sub analyze_one_rev {
 	print "processing revision $localrev:$rev\n" if $self->{verbose} > 0;
 	$self->{max_numeric_id} = $localrev;
 
-	# check if we have to use a different saved files data
-	# we must use dclone here, because more than one children might depend on this data
-	if ($self->{relative_anal} and defined $self->{revs_by_node}{$rev}{use_saved_data}) {
-		my $which = $self->{revs_by_node}{$rev}{use_saved_data};
-		$self->{files} = dclone $self->{revs_by_node}{$which}{saved_files};
+	# Check if we have to use a different saved files data.
+	# We implement a crude reference-counting GC system here to avoid stale, 
+	# already used copies eating up all memory:
+	# if more than one children depend on the saved data, we use dclone, 
+	# to keep the original pristine for use in future revisions that need it;
+	# if the current rev is the last one that needs this particular collection of
+	# saved data, we just assign the reference and modify the data structure in place.
+	if ($self->{relative_anal} and defined $self->{revs_by_node}{$rev}{saved_data_source_rev}) {
+		my $parent_rev = $self->{revs_by_node}{$rev}{saved_data_source_rev};
+		my $parent = $self->{revs_by_node}{$parent_rev};
+		if ($parent->{saved_data_refcount} > 1) {
+			$self->{files} = dclone $parent->{saved_files};
+		}
+		elsif ($parent->{saved_data_refcount} == 1) {
+			$self->{files} = $parent->{saved_files};
+			$self->{cloned_files}--;
+		}
+		$parent->{saved_data_refcount} --;
+		say " $localrev: using saved data from $parent->{localrev}, whose refcount is $parent->{saved_data_refcount}, total cloned files $self->{cloned_files}";
 	}
 
 	# keep previously collected file data, but mark them invalid
@@ -171,8 +185,10 @@ sub analyze_one_rev {
 
 	# check if we have to save the files data we've collected
 	# we have to use deep cloning here!
-	if ($self->{relative_anal} and $self->{revs_by_node}{$rev}{must_save_data}) {
+	if ($self->{relative_anal} and $self->{revs_by_node}{$rev}{saved_data_refcount}) {
 		$self->{revs_by_node}{$rev}{saved_files} = dclone $self->{files};
+		$self->{cloned_files}++;
+		say " $localrev: saving data, refcount is $self->{revs_by_node}{$rev}{saved_data_refcount}, total cloned files $self->{cloned_files}";
 	}
 }
 
@@ -745,12 +761,12 @@ sub get_and_save_full_log {
 		# changeset data we get from the VCS is calculated relative to the first parent
 		# FIXME is this true in git?
 		if ($parent->{node} ne $prev->{node}) {
-			$this->{use_saved_data} = $parent->{node};
-			$parent->{must_save_data} = 1;
+			$this->{saved_data_source_rev} = $parent->{node};
+			$parent->{saved_data_refcount} = scalar @{$parent->{children}};
 		}
 		else {
-			$this->{use_saved_data} = undef;
-			$parent->{must_save_data} = 0;
+			$this->{saved_data_source_rev} = undef;
+			$parent->{saved_data_refcount} = 0;
 		}
 	}
 
