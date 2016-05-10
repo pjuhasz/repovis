@@ -772,13 +772,17 @@ sub get_and_save_full_log {
 
 		# changeset data we get from the VCS is calculated relative to the first parent
 		# FIXME is this true in git?
-		if ($parent->{node} ne $prev->{node}) {
+		if (defined $parent and $parent->{node} ne $prev->{node}) {
 			$this->{saved_data_source_rev} = $parent->{node};
 			$parent->{saved_data_refcount} ++;
 		}
 		else {
 			$this->{saved_data_source_rev} = undef;
 			$parent->{saved_data_refcount} = 0;
+			if (not defined $parent) {
+				# multiple roots -_-
+				$this->{force_full_processing} = 1;
+			}
 		}
 	}
 
