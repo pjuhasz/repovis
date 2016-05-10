@@ -234,7 +234,7 @@ sub analyze_one_rev {
 
 	# check if we have to save the files data we've collected
 	# we have to use deep cloning here!
-	if ($rev_data->{analyze_mode} == REV_PROCESSING_RELATIVE and defined $rev_data->{saved_data_refcount}) {
+	if ($rev_data->{analyze_mode} == REV_PROCESSING_RELATIVE and $rev_data->{saved_data_refcount}) {
 		$self->{revs_by_node}{$rev}{saved_files} = dclone $self->{files};
 		$self->{cloned_files}++;
 		say " $localrev: saving data, refcount is $self->{revs_by_node}{$rev}{saved_data_refcount},".
