@@ -5,6 +5,7 @@ package VCS::Visualize::Constants;
 use 5.010001;
 use strict;
 use warnings;
+use Scalar::Util qw/dualvar/;
 
 my %constants;
 BEGIN {
@@ -24,12 +25,12 @@ BEGIN {
 		REV_PROCESSING_FULL     => 1,
 		REV_PROCESSING_RELATIVE => 2,
 
-		FILE_STATUS_DELETED   => 0,
-		FILE_STATUS_UNCHANGED => 1,
-		FILE_STATUS_MODIFIED  => 2,
-		FILE_STATUS_ADDED     => 3,
-		FILE_STATUS_COPIED    => 4,
-		FILE_STATUS_RENAMED   => 5,
+		FILE_STATUS_DELETED   => dualvar(0, 'deleted  '),
+		FILE_STATUS_UNCHANGED => dualvar(1, 'unchanged'),
+		FILE_STATUS_MODIFIED  => dualvar(2, 'modified '),
+		FILE_STATUS_ADDED     => dualvar(3, 'added    '),
+		FILE_STATUS_COPIED    => dualvar(4, 'copied   '),
+		FILE_STATUS_RENAMED   => dualvar(5, 'renamed  '),
 
 		DIFF_FLAG_BINARY  => 1,
 		DIFF_FLAG_RENAMED => 2,
