@@ -186,6 +186,14 @@ sub blame {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 	warn $err if $err;
+	my $flag = 0;
+	if (@$out and $out->[0] =~ /binary file$/) {
+		$flag |= DIFF_FLAG_BINARY;
+		$out->[0] = $flag;
+	}
+	else {
+		unshift @$out, $flag;
+	}
 	return $out;
 }
 
