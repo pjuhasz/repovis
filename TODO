@@ -4,6 +4,8 @@
 # + track extent of graph (done in extent.pl)
 # + outline of file blobs in blame mode (done in extent.pl)
 # -- directories?
+# - sort by path (File::Spec etc.)
+# - hg stat shouldn't return unchanged, reuse old files info
 # + write binary matrices instead of one long line of data per source line
 # -- png directly?
 # + support for different curves as a startup option
