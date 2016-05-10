@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use VCS::Visualize::Repo::Mercurial::CmdServer;
+use VCS::Visualize::Constants qw/:file_status :diff_flags/;
 use Carp;
 
 sub find_root {
@@ -106,13 +107,12 @@ sub files {
 
 	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(@command);
 
-	# use readable strings instead of single letters to avoid confusion with git
-	# TODO numeric constants?
+	# use numeric constants instead of single letters to avoid confusion with git
 	my %mapping = (
-		M => 'modified',
-		A => 'added',
-		R => 'deleted',
-		C => 'unchanged',
+		M => FILE_STATUS_MODIFIED,
+		A => FILE_STATUS_ADDED,
+		R => FILE_STATUS_DELETED,
+		C => FILE_STATUS_UNCHANGED,
 	);
 
 	my (@files, %copied_index);
@@ -127,14 +127,14 @@ sub files {
 			$files[-1]{source} = $name;
 			# mark it as copied, but we may have to correct this to renamed
 			# if the same file is found among the removed ones
-			$files[-1]{status} = 'copied';
+			$files[-1]{status} = FILE_STATUS_COPIED;
 			$copied_index{$name} = $#files;
 		}
 		elsif ($status_char eq 'R' and exists $copied_index{$name}) {
 			# again, we rely on Removed files being reported after Added ones
 			# all this awkwardness wouldn't be necessary if hg reported
 			# renamed and copied files in a more sensible way.
-			$files[ $copied_index{$name} ]{status} = 'renamed';
+			$files[ $copied_index{$name} ]{status} = FILE_STATUS_RENAMED;
 		}
 		else {
 			push @files, { name => $name, status => $mapping{$status_char} };
@@ -204,15 +204,15 @@ sub diff {
 
 	# mangle output: throw away header lines up to the first @@ block,
 	# but try to find rename and binary indications and return those first
-	my %flags;
+	my $flags = 0;
 	while ($out->[0] and substr($out->[0], 0, 1) ne '@') {
 		my $line = shift @$out;
-		$flags{binary}  = 1 if $line =~ /binary/i;
-		$flags{renamed} = 1 if $line =~ /rename/i;
-		$flags{copied}  = 1 if $line =~ /copied/i;
-		last if $flags{binary};
+		$flags |= DIFF_FLAGS_BINARY  if $line =~ /binary/i;
+		$flags |= DIFF_FLAGS_RENAMED if $line =~ /rename/i;
+		$flags |= DIFF_FLAGS_COPIED  if $line =~ /copied/i;
+		last if $flags & DIFF_FLAGS_BINARY;
 	}
-	unshift @$out, join ',', keys %flags if %flags;
+	unshift @$out, $flags;
 	return $out;
 }
 
