@@ -480,9 +480,7 @@ sub process_unchanged_file {
 	# so we don't have to recalculate coordinates for this file either,
 	# we can happily bail out. We return a special flag so that the 
 	# coords, extent, center etc. data don't have to be recalculated.
-	# However, we do recalculate in case of moved/renamed files 
-	# (TODO perhaps not necessary if the file was moved within the same dir?)
-	if ($file_record->{start_lcnt} == $start and not $args{renamed}) {
+	if ($file_record->{start_lcnt} == $start) {
 		return (FILE_PROCESSING_UNCHANGED, $coord_list, $file_record->{extent});
 	}
 
@@ -497,7 +495,6 @@ sub process_unchanged_file {
 			my $i = $lcnt - $start;
 			$coord_list->[$i][PT_X] = $x;
 			$coord_list->[$i][PT_Y] = $y;
-			$coord_list->[$i][PT_FILE] = $file_record if $args{renamed};
 			# keep the rest
 	}
 
