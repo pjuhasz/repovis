@@ -272,23 +272,23 @@ sub do_one_file {
 		#   but keep the rest of the data
 		# - removed files we mark as invalid, drop from processing
 		my $s = $file_data->{status};
-		if ($s eq 'modified') {
+		if ($s == FILE_STATUS_MODIFIED) {
 			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev);
 		}
-		elsif ($s eq 'added') {
+		elsif ($s == FILE_STATUS_ADDED) {
 			($success, $coord_list, $extent) = $self->process_added_file($file, $rev);
 		}
-		elsif ($s eq 'unchanged') {
+		elsif ($s == FILE_STATUS_UNCHANGED) {
 			($success, $coord_list, $extent) = $self->process_unchanged_file($file, $rev);
 		}
-		elsif ($s eq 'deleted') {
+		elsif ($s == FILE_STATUS_DELETED) {
 			return;
 		}
-		elsif ($s eq 'copied') { # TODO mark file label somehow
+		elsif ($s == FILE_STATUS_COPIED) { # TODO mark file label somehow
 			$self->{files}{$file} = dclone $self->{files}{ $file_data->{source} };
 			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev, renamed => 1);
 		}
-		elsif ($s eq 'renamed') { # TODO mark file label somehow
+		elsif ($s == FILE_STATUS_RENAMED) { # TODO mark file label somehow
 			$self->{files}{$file} = $self->{files}{ $file_data->{source} };
 			delete $self->{files}{ $file_data->{source} };
 			($success, $coord_list, $extent) = $self->process_modified_file($file, $rev, renamed => 1);
@@ -338,7 +338,7 @@ sub process_file_blame {
 	if (@$blame == 0) {
 		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
 	}
-	elsif ($blame->[0] =~ /binary file/) {
+	elsif ($blame->[0] =~ /binary file/) { # TODO replace this with numeric flag
 		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
@@ -390,7 +390,7 @@ sub process_modified_file {
 	if (@$diff == 0) {
 		return $self->process_unchanged_file($file, $rev); # empty diff means no change
 	}
-	elsif ($diff->[0] =~ /binary/) {
+	elsif ($diff->[0] & DIFF_FLAG_BINARY) {
 		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
