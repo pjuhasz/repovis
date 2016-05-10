@@ -18,21 +18,7 @@ use Scalar::Util qw/weaken/;
 
 use VCS::Visualize::Repo;
 use VCS::Visualize::BoundingRectangle;
-
-use constant {
-	FILE_PROCESSING_FAILED     => 0,
-	FILE_PROCESSING_SUCCESSFUL => 1,
-	FILE_PROCESSING_UNCHANGED  => 2,
-	PT_X    => 0,
-	PT_Y    => 1,
-	PT_REV  => 2,
-	PT_USER => 3,
-	PT_FILE => 4,
-	PT_N    => 5,
-	REV_PROCESSING_SKIP => 0,
-	REV_PROCESSING_FULL => 1,
-	REV_PROCESSING_RELATIVE => 2,
-};
+use VCS::Visualize::Constants ':all';
 
 our $VERSION = '0.01';
 
