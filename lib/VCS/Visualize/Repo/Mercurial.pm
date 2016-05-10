@@ -41,6 +41,17 @@ sub current_rev {
 	return join "", @$out;
 }
 
+sub revlist {
+	my ($self, $revspec) = @_;
+	my ($ret, $out, $err) = $self->{cmdsrv}->runcommand(
+		qw/hg log/,
+		'--cwd', $self->{root_dir},
+		'--rev', $revspec,
+		qw/ --template {node|short}\n/);
+	warn $err if $err;
+	return $out;
+}
+
 sub get_all_revs {
 	my ($self) = @_;
 	# \x1f is the ASCII field separator character
