@@ -335,10 +335,9 @@ sub process_file_blame {
 
 	my $file_record = $self->{files}{$file};
 	my $blame = $self->{repo}->blame(file => $file, rev => $rev);
-	if (@$blame == 0) {
-		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
-	}
-	elsif ($blame->[0] =~ /binary file/) { # TODO replace this with numeric flag
+
+	my $flags = shift @$blame;
+	if ($flags & DIFF_FLAG_BINARY) {
 		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
@@ -346,6 +345,10 @@ sub process_file_blame {
 		# not binary (anymore? the old binary file might have been
 		# replaced by a text file of the same name), clear the taint
 		$file_record->{binary} = 0;
+	}
+
+	if (@$blame == 0) {
+		return (FILE_PROCESSING_FAILED, undef, undef); # empty file, skip it
 	}
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
@@ -387,10 +390,8 @@ sub process_modified_file {
 	my $file_record = $self->{files}{$file};
 	my $diff = $self->{repo}->diff(file => $file, rev => $rev);
 
-	if (@$diff == 0) {
-		return $self->process_unchanged_file($file, $rev); # empty diff means no change
-	}
-	elsif ($diff->[0] & DIFF_FLAG_BINARY) {
+	my $flags = shift @$diff;
+	if ($flags & DIFF_FLAG_BINARY) {
 		$file_record->{binary} = 1; # skip it, but mark as binary for future use
 		return (FILE_PROCESSING_FAILED, undef, undef);
 	}
@@ -399,6 +400,11 @@ sub process_modified_file {
 		# replaced by a text file of the same name), clear the taint
 		$file_record->{binary} = 0;
 	}
+
+	if (@$diff == 0) {
+		return $self->process_unchanged_file($file, $rev); # empty diff means no change
+	}
+
 
 	my $extent = VCS::Visualize::BoundingRectangle->new;
 
