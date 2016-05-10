@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 use VCS::Visualize::Repo::Mercurial::CmdServer;
-use VCS::Visualize::Constants qw/:file_status :diff_flags/;
+use VCS::Visualize::Constants qw/:file_status :diff_flag/;
 use Carp;
 
 sub find_root {
@@ -207,10 +207,10 @@ sub diff {
 	my $flags = 0;
 	while ($out->[0] and substr($out->[0], 0, 1) ne '@') {
 		my $line = shift @$out;
-		$flags |= DIFF_FLAGS_BINARY  if $line =~ /binary/i;
-		$flags |= DIFF_FLAGS_RENAMED if $line =~ /rename/i;
-		$flags |= DIFF_FLAGS_COPIED  if $line =~ /copied/i;
-		last if $flags & DIFF_FLAGS_BINARY;
+		$flags |= DIFF_FLAG_BINARY  if $line =~ /binary/i;
+		$flags |= DIFF_FLAG_RENAMED if $line =~ /rename/i;
+		$flags |= DIFF_FLAG_COPIED  if $line =~ /copied/i;
+		last if $flags & DIFF_FLAG_BINARY;
 	}
 	unshift @$out, $flags;
 	return $out;
