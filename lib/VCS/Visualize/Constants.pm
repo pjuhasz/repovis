@@ -30,6 +30,10 @@ BEGIN {
 		FILE_STATUS_ADDED     => 3,
 		FILE_STATUS_COPIED    => 4,
 		FILE_STATUS_RENAMED   => 5,
+
+		DIFF_FLAG_BINARY  => 1,
+		DIFF_FLAG_RENAMED => 2,
+		DIFF_FLAG_COPIED  => 4,
 	);
 }
 
@@ -43,9 +47,10 @@ our %EXPORT_TAGS = (
    all              => \@EXPORT_OK,
    default          => \@EXPORT,
    file_processing  => [ grep /^FILE_PROCESSING/, @EXPORT_OK ],
-   pt               => [ grep /^PT/, @EXPORT_OK ],
-   rev_processing   => [ grep /^REV_PROCESSING/, @EXPORT_OK ],
-   file_status      => [ grep /^FILE_STATUS/, @EXPORT_OK ],
+   pt               => [ grep /^PT/,              @EXPORT_OK ],
+   rev_processing   => [ grep /^REV_PROCESSING/,  @EXPORT_OK ],
+   file_status      => [ grep /^FILE_STATUS/,     @EXPORT_OK ],
+   diff_flag        => [ grep /^DIFF_FLAG/,       @EXPORT_OK ],
 );
 
 1;
