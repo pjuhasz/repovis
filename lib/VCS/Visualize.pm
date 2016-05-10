@@ -14,6 +14,7 @@ use Cwd;
 use FindBin;
 use File::Copy;
 use Storable qw/dclone/;
+use Scalar::Util qw/weaken/;
 
 use VCS::Visualize::Repo;
 use VCS::Visualize::BoundingRectangle;
@@ -335,6 +336,7 @@ sub process_file_blame {
 								$file_record,
 								$self->{lcnt} - $file_record->{start_lcnt},
 							];
+			weaken($coord_list[-1][PT_FILE]);
 
 			$self->{lcnt}++;
 		}
@@ -404,7 +406,10 @@ sub process_modified_file {
 				$coord_list->[$newc][PT_X] = $x;
 				$coord_list->[$newc][PT_Y] = $y;
 				$coord_list->[$newc][PT_N] = $newc;
-				$coord_list->[$newc][PT_FILE] = $file_record if $args{renamed};
+				if ($args{renamed}) {
+					$coord_list->[$newc][PT_FILE] = $file_record;
+					weaken($coord_list->[$newc][PT_FILE]);
+				}
 				# keep the rest
 
 				$newc++;
@@ -427,6 +432,7 @@ sub process_modified_file {
 									$file_record,
 									$newc,
 								];
+				weaken($coord_list->[$newc][PT_FILE]);
 				$newc++;
 				$lcnt++;
 			}
@@ -444,7 +450,10 @@ sub process_modified_file {
 		$coord_list->[$newc][PT_X] = $x;
 		$coord_list->[$newc][PT_Y] = $y;
 		$coord_list->[$newc][PT_N] = $newc;
-		$coord_list->[$newc][PT_FILE] = $file_record if $args{renamed};
+		if ($args{renamed}) {
+			$coord_list->[$newc][PT_FILE] = $file_record;
+			weaken($coord_list->[$newc][PT_FILE]);
+		}
 
 		# keep the rest
 
@@ -559,6 +568,7 @@ sub process_added_file {
 								$file_record,
 								$lcnt - $start,
 							];
+			weaken($coord_list[-1][PT_FILE]);
 	}
 
 	return (FILE_PROCESSING_SUCCESSFUL, \@coord_list, $extent);
