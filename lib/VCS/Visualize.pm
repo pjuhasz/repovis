@@ -29,6 +29,9 @@ use constant {
 	PT_USER => 3,
 	PT_FILE => 4,
 	PT_N    => 5,
+	REV_PROCESSING_SKIP => 0,
+	REV_PROCESSING_FULL => 1,
+	REV_PROCESSING_RELATIVE => 2,
 };
 
 our $VERSION = '0.01';
@@ -73,7 +76,6 @@ sub new {
 		cache_dir => $args{cache_dir},
 		commit_rgb => 0xffff0000, # fully opaque red
 		cached_n_to_xy => [],
-		relative_anal => 0,
 		verbose => $args{verbose},
 		init_done => 0,
 	};
@@ -109,14 +111,55 @@ sub init {
 	$self->{init_done} = 1;
 }
 
-sub analyze_all {
+sub parse_rev_spec {
+	my ($self, $rev_spec) = @_;
+
+	$self->init() if not $self->{init_done};
+
+	my $revs;
+	if (not defined $rev_spec or $rev_spec eq '') {
+		for my $rev (@{$self->{revs}}) {
+			$rev->{analyze_mode} = REV_PROCESSING_SKIP;
+		}
+		my $current = $self->{repo}->current_rev();
+		$self->{revs_by_node}{$current}{analyze_mode} = REV_PROCESSING_FULL;
+	}
+	elsif ($rev_spec eq 'all') {
+		for my $rev (@{$self->{revs}}) {
+			$rev->{analyze_mode} = REV_PROCESSING_RELATIVE;
+			if ($rev->{force_full_processing}) {
+				$rev->{analyze_mode} = REV_PROCESSING_FULL;
+			}
+		}
+	}
+	elsif (ref $rev_spec eq 'ARRAY') {
+		for my $rev (@{$self->{revs}}) {
+			$rev->{analyze_mode} = REV_PROCESSING_SKIP;
+		}
+		for my $rev_range (@$rev_spec) {
+			my @revlist = @{$self->{repo}->revlist($rev_range)};
+			for my $node (@revlist) {
+				my $rev = $self->{revs_by_node}{$node};
+				$rev->{analyze_mode} = REV_PROCESSING_RELATIVE;
+				if ($rev->{force_full_processing}) {
+					$rev->{analyze_mode} = REV_PROCESSING_FULL;
+				}
+			}
+			print Dumper $self->{revs_by_node};
+		}
+	}
+	else {
+		croak 'error: invalid rev spec';
+	}
+}
+
+sub analyze {
 	my ($self) = @_;
 
 	$self->init() if not $self->{init_done};
 
-	$self->{relative_anal} = 1;
-
 	for my $rev (@{$self->{revs}}) {
+		next if $rev->{analyze_mode} == REV_PROCESSING_SKIP;
 		$self->analyze_one_rev($rev->{node});
 	}
 }
@@ -128,7 +171,10 @@ sub analyze_one_rev {
 
 	$rev //= $self->{repo}->current_rev();
 
-	my $localrev = $self->{revs_by_node}{$rev}{localrev};
+	my $rev_data = $self->{revs_by_node}{$rev};
+	return if $rev_data->{analyze_mode} == REV_PROCESSING_SKIP;
+
+	my $localrev = $rev_data->{localrev};
 	print "processing revision $localrev:$rev\n" if $self->{verbose} > 0;
 	$self->{max_numeric_id} = $localrev;
 
@@ -139,8 +185,8 @@ sub analyze_one_rev {
 	# to keep the original pristine for use in future revisions that need it;
 	# if the current rev is the last one that needs this particular collection of
 	# saved data, we just assign the reference and modify the data structure in place.
-	if ($self->{relative_anal} and defined $self->{revs_by_node}{$rev}{saved_data_source_rev}) {
-		my $parent_rev = $self->{revs_by_node}{$rev}{saved_data_source_rev};
+	if ($rev_data->{analyze_mode} == REV_PROCESSING_RELATIVE and defined $rev_data->{saved_data_source_rev}) {
+		my $parent_rev = $rev_data->{saved_data_source_rev};
 		my $parent = $self->{revs_by_node}{$parent_rev};
 		if ($parent->{saved_data_refcount} > 1) {
 			$self->{files} = dclone $parent->{saved_files};
@@ -189,7 +235,7 @@ sub analyze_one_rev {
 
 	# check if we have to save the files data we've collected
 	# we have to use deep cloning here!
-	if ($self->{relative_anal} and $self->{revs_by_node}{$rev}{saved_data_refcount}) {
+	if ($rev_data->{analyze_mode} == REV_PROCESSING_RELATIVE and defined $rev_data->{saved_data_refcount}) {
 		$self->{revs_by_node}{$rev}{saved_files} = dclone $self->{files};
 		$self->{cloned_files}++;
 		say " $localrev: saving data, refcount is $self->{revs_by_node}{$rev}{saved_data_refcount},".
@@ -228,7 +274,7 @@ sub do_one_file {
 	$self->{files}{$file}{status} = 0;
 
 	my ($success, $coord_list, $extent);
-	if ($self->{relative_anal}) { # TODO
+	if ($self->{revs_by_node}{$rev}{analyze_mode} == REV_PROCESSING_RELATIVE) {
 		print " processing $file_data->{status}   file $file\n" if $self->{verbose} > 1;
 
 		# in relative analysis mode we need to do different things with

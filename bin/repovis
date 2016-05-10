@@ -52,17 +52,16 @@ my $vis = VCS::Visualize->new(
 );
 
 # if no revision was specified, assume the current revision
-my $revisions = $options{revision} // [ undef ];
-
 # however, in analyze mode, analyze all revisions
+my $revisions;
 if ($options{'analyze-all'}) {
-	$vis->analyze_all();
+	$vis->parse_rev_spec('all');
 }
 else {
-	for my $rev (@$revisions) {
-		$vis->analyze_one_rev($rev);
-	}
+	$vis->parse_rev_spec($options{revision});
 }
+
+$vis->analyze();
 
 if ($options{Animate}) {
 # TODO create animgif or something
