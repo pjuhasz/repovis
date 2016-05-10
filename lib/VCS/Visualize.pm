@@ -327,14 +327,14 @@ sub process_file_blame {
 
 			$extent->update_xy($x, $y);
 
-			push @coord_list, {
-								X => $x,
-								Y => $y,
-								i => $id,
-								u => $self->{users}{$user},
-								f => $file_record,
-								n => $self->{lcnt} - $file_record->{start_lcnt},
-							};
+			push @coord_list, [
+								$x,
+								$y,
+								$id,
+								$self->{users}{$user},
+								$file_record,
+								$self->{lcnt} - $file_record->{start_lcnt},
+							];
 
 			$self->{lcnt}++;
 		}
