@@ -147,6 +147,7 @@ sub analyze_one_rev {
 		}
 		elsif ($parent->{saved_data_refcount} == 1) {
 			$self->{files} = $parent->{saved_files};
+			delete $parent->{saved_files};
 			$self->{cloned_files}--;
 		}
 		$parent->{saved_data_refcount} --;
