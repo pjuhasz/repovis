@@ -145,7 +145,6 @@ sub parse_rev_spec {
 					$rev->{analyze_mode} = REV_PROCESSING_FULL;
 				}
 			}
-			print Dumper $self->{revs_by_node};
 		}
 	}
 	else {
