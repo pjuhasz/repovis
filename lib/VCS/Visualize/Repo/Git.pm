@@ -41,6 +41,14 @@ sub current_rev {
 	return $rev;
 }
 
+sub revlist {
+	my ($self, $revspec) = @_;
+
+	my $res = qx|git -C "$self->{root_dir}" rev-list --abbrev-commit --abbrev=12 $revspec|;
+	chomp $res;
+	return [split /\n/, $res];
+}
+
 # TODO  node localrev user user_longname date desc branch p1node p2node p1rev p2rev
 # git log ...
 sub get_all_revs {
