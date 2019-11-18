@@ -201,7 +201,7 @@ sub diff {
 	my ($self, %args) = @_;
 	my $rev = $args{rev} // $self->{orig_rev};
 	my @command = (
-		qw/hg diff --git -U 0/,
+		qw/hg diff --git --no-binary -U 0/,
 		'--cwd', $self->{root_dir},
 		'--change', $rev,
 		$args{file}
@@ -213,15 +213,17 @@ sub diff {
 	# mangle output: throw away header lines up to the first @@ block,
 	# but try to find rename and binary indications and return those first
 	my $flags = 0;
-	while ($out->[0] and substr($out->[0], 0, 1) ne '@') {
-		my $line = shift @$out;
-		$flags |= DIFF_FLAG_BINARY  if $line =~ /binary/i;
-		$flags |= DIFF_FLAG_RENAMED if $line =~ /rename/i;
-		$flags |= DIFF_FLAG_COPIED  if $line =~ /copied/i;
+	my @blocks;
+
+	while (my $line = shift @$out) {
+		$flags |= DIFF_FLAG_BINARY  if $line =~ /^binary/i;
+		$flags |= DIFF_FLAG_RENAMED if $line =~ /^rename/i;
+		$flags |= DIFF_FLAG_COPIED  if $line =~ /^(?:copied|copy)/i;
+		push @blocks, ($line =~ /^(\@\@ [^@]+ \@\@)/msgx);
 		last if $flags & DIFF_FLAG_BINARY;
 	}
-	unshift @$out, $flags;
-	return $out;
+
+	return [$flags, @blocks];
 }
 
 sub DESTROY {
